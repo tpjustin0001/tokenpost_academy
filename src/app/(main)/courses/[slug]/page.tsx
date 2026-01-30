@@ -1,251 +1,250 @@
+'use client'
+
 /**
- * 강의 상세 페이지
- * 강의 정보, 커리큘럼, 수강 신청 버튼
+ * 강의 상세 페이지 - 프리미엄 디자인
  */
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 
-// TODO: Supabase에서 데이터 조회로 대체
-const MOCK_COURSE = {
-    id: 'web3-fundamentals',
-    title: '웹3 핵심 개념 완벽 정리',
-    description: '블록체인, 스마트 컨트랙트, DeFi의 기초 개념부터 실전 활용까지. 웹3 세계로의 첫 걸음을 내딛으세요.',
-    thumbnail: '/images/courses/web3-fundamentals.jpg',
-    instructor: {
-        name: '김토큰',
-        title: 'Web3 개발자 & 교육자',
-        bio: '10년차 블록체인 개발자. 유수 기업에서 DeFi 프로젝트를 이끌어온 경험을 바탕으로, 초보자도 이해하기 쉬운 강의를 제공합니다.',
-    },
-    duration: '8시간 30분',
-    level: 'beginner',
-    price: 99000,
-    enrolledCount: 1234,
-    rating: 4.8,
-    reviewCount: 256,
-    lastUpdated: '2024-01-15',
-    modules: [
-        {
-            id: 'module-1',
-            title: '블록체인 기초',
-            lessons: [
-                { id: 'lesson-1', title: '블록체인이란 무엇인가?', duration: '15:30', isFree: true },
-                { id: 'lesson-2', title: '탈중앙화의 의미', duration: '12:45', isFree: false },
-                { id: 'lesson-3', title: '합의 알고리즘 이해하기', duration: '18:20', isFree: false },
-            ],
-        },
-        {
-            id: 'module-2',
-            title: '스마트 컨트랙트',
-            lessons: [
-                { id: 'lesson-4', title: '스마트 컨트랙트 개념', duration: '14:00', isFree: false },
-                { id: 'lesson-5', title: 'Solidity 기초 문법', duration: '22:15', isFree: false },
-                { id: 'lesson-6', title: '첫 번째 컨트랙트 작성하기', duration: '25:30', isFree: false },
-            ],
-        },
-        {
-            id: 'module-3',
-            title: 'DeFi 입문',
-            lessons: [
-                { id: 'lesson-7', title: 'DeFi 생태계 개요', duration: '16:45', isFree: false },
-                { id: 'lesson-8', title: 'DEX와 AMM 이해하기', duration: '20:10', isFree: false },
-                { id: 'lesson-9', title: 'Lending/Borrowing 프로토콜', duration: '19:30', isFree: false },
-            ],
-        },
-    ],
-    whatYouLearn: [
-        '블록체인의 핵심 원리와 작동 방식',
-        '스마트 컨트랙트 개발 기초',
-        'DeFi 프로토콜의 구조와 활용법',
-        'Web3 지갑 연동 및 트랜잭션 처리',
-        '실제 프로젝트 적용 사례 분석',
-    ],
+interface Lesson {
+    id: string
+    title: string
+    duration: string
+    isFreePreview?: boolean
 }
 
-export default async function CourseDetailPage({
-    params,
-}: {
-    params: Promise<{ slug: string }>
-}) {
-    const { slug } = await params
-    const course = MOCK_COURSE // TODO: slug로 강의 조회
+interface Module {
+    id: string
+    title: string
+    lessons: Lesson[]
+}
 
-    const totalLessons = course.modules.reduce((acc, m) => acc + m.lessons.length, 0)
+const COURSE_DATA = {
+    'blockchain-basics': {
+        title: '블록체인 기초 입문',
+        description: '블록체인 기술의 핵심 개념을 처음부터 차근차근 배워보세요. 암호화, 분산 원장, 합의 알고리즘 등 블록체인의 기본 원리를 이해하고 실제 활용 사례까지 알아봅니다.',
+        level: '입문',
+        duration: '2시간',
+        lessons: 10,
+        isFree: true,
+        gradient: 'from-emerald-500 to-teal-600',
+    },
+    'web3-fundamentals': {
+        title: '웹3 핵심 개념',
+        description: '웹3의 핵심 개념과 기술 스택을 체계적으로 학습합니다. 지갑, 스마트 컨트랙트, 탈중앙화 애플리케이션(dApp)의 작동 원리를 이해하고 직접 사용해봅니다.',
+        level: '입문',
+        duration: '4시간 30분',
+        lessons: 24,
+        isFree: false,
+        gradient: 'from-blue-500 to-indigo-600',
+    },
+    'defi-masterclass': {
+        title: 'DeFi 마스터클래스',
+        description: '탈중앙화 금융(DeFi)의 모든 것을 배웁니다. DEX, Lending, Yield Farming, Liquidity Mining 등 DeFi 프로토콜의 작동 원리와 투자 전략을 학습합니다.',
+        level: '중급',
+        duration: '6시간 15분',
+        lessons: 36,
+        isFree: false,
+        gradient: 'from-purple-500 to-pink-600',
+    },
+}
+
+const CURRICULUM: Module[] = [
+    {
+        id: 'module-1',
+        title: '블록체인 기초 이론',
+        lessons: [
+            { id: 'lesson-1', title: '블록체인이란 무엇인가?', duration: '15:30', isFreePreview: true },
+            { id: 'lesson-2', title: '탈중앙화의 의미와 중요성', duration: '12:45' },
+            { id: 'lesson-3', title: '합의 알고리즘 이해하기', duration: '18:20' },
+            { id: 'lesson-4', title: '암호화와 해시 함수', duration: '16:00' },
+        ],
+    },
+    {
+        id: 'module-2',
+        title: '스마트 컨트랙트 기초',
+        lessons: [
+            { id: 'lesson-5', title: '스마트 컨트랙트 개념', duration: '14:00' },
+            { id: 'lesson-6', title: 'Solidity 기초 문법', duration: '22:15' },
+            { id: 'lesson-7', title: '첫 번째 컨트랙트 작성하기', duration: '25:30' },
+        ],
+    },
+    {
+        id: 'module-3',
+        title: '실전 활용',
+        lessons: [
+            { id: 'lesson-8', title: '지갑 연동하기', duration: '18:00' },
+            { id: 'lesson-9', title: 'dApp과 상호작용', duration: '20:00' },
+            { id: 'lesson-10', title: '프로젝트 마무리', duration: '15:00' },
+        ],
+    },
+]
+
+export default function CourseDetailPage() {
+    const params = useParams()
+    const router = useRouter()
+    const slug = params.slug as string
+
+    const course = COURSE_DATA[slug as keyof typeof COURSE_DATA] || COURSE_DATA['blockchain-basics']
+    const allLessons = CURRICULUM.flatMap(m => m.lessons)
+    const firstLesson = allLessons[0]
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-            {/* 헤더 섹션 */}
-            <div className="bg-slate-800/50 border-b border-slate-700">
-                <div className="max-w-6xl mx-auto px-6 py-12">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* 강의 정보 */}
-                        <div className="lg:col-span-2 space-y-4">
-                            <div className="flex items-center gap-2">
-                                <Badge className="bg-green-500/20 text-green-400">입문</Badge>
-                                <Badge variant="outline" className="border-slate-600 text-slate-400">Web3</Badge>
-                                <Badge variant="outline" className="border-slate-600 text-slate-400">블록체인</Badge>
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
+            {/* Background */}
+            <div className="fixed inset-0 opacity-30 pointer-events-none">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-transparent to-transparent" />
+            </div>
+
+            {/* Header */}
+            <header className="fixed top-0 left-0 right-0 h-16 backdrop-blur-xl bg-slate-950/80 border-b border-white/5 z-50">
+                <div className="h-full max-w-6xl mx-auto px-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => router.push('/')}
+                            className="p-2 hover:bg-white/5 rounded-lg transition"
+                        >
+                            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <Link href="/" className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-sm font-bold shadow-lg shadow-blue-500/20">
+                                TP
                             </div>
+                            <span className="font-semibold hidden sm:block">Academy</span>
+                        </Link>
+                    </div>
+                    <Link href="/login">
+                        <Button variant="outline" size="sm" className="border-white/10 text-slate-400 hover:text-white hover:bg-white/5">
+                            로그인
+                        </Button>
+                    </Link>
+                </div>
+            </header>
 
-                            <h1 className="text-3xl md:text-4xl font-bold text-white">
-                                {course.title}
-                            </h1>
-
-                            <p className="text-lg text-slate-400">
+            {/* Content */}
+            <main className="relative pt-24 pb-16 px-4">
+                <div className="max-w-6xl mx-auto">
+                    {/* Hero Section */}
+                    <div className="grid lg:grid-cols-3 gap-8 mb-12">
+                        {/* Course Info */}
+                        <div className="lg:col-span-2">
+                            <div className="flex items-center gap-3 mb-4">
+                                <span className={`px-3 py-1 rounded-lg text-xs font-semibold ${course.isFree ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                                    {course.isFree ? '무료' : '멤버십'}
+                                </span>
+                                <span className="text-xs text-slate-500">{course.level}</span>
+                            </div>
+                            <h1 className="text-4xl font-bold mb-4">{course.title}</h1>
+                            <p className="text-lg text-slate-400 leading-relaxed mb-6">
                                 {course.description}
                             </p>
-
-                            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400">
-                                <span className="flex items-center gap-1">
-                                    ⭐ {course.rating} ({course.reviewCount}개 리뷰)
-                                </span>
-                                <span>{course.enrolledCount.toLocaleString()}명 수강중</span>
-                                <span>{totalLessons}개 강의</span>
-                                <span>{course.duration}</span>
-                            </div>
-
-                            <div className="flex items-center gap-3 pt-2">
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
-                                    {course.instructor.name[0]}
+                            <div className="flex items-center gap-6 text-sm text-slate-400">
+                                <div className="flex items-center gap-2">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span>{course.duration}</span>
                                 </div>
-                                <div>
-                                    <p className="text-white font-medium">{course.instructor.name}</p>
-                                    <p className="text-sm text-slate-400">{course.instructor.title}</p>
+                                <div className="flex items-center gap-2">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                    <span>{course.lessons}개 레슨</span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* 구매 카드 */}
-                        <Card className="bg-slate-800 border-slate-700 lg:sticky lg:top-6">
-                            <CardContent className="p-6 space-y-4">
-                                {/* 썸네일 */}
-                                <div className="aspect-video bg-gradient-to-br from-blue-600/30 to-purple-600/30 rounded-lg flex items-center justify-center">
-                                    <span className="text-6xl">🎓</span>
+                        {/* CTA Card */}
+                        <div className="relative">
+                            <div className="sticky top-24 rounded-2xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 p-6 backdrop-blur">
+                                <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${course.gradient} opacity-5`} />
+                                <div className="relative">
+                                    {course.isFree ? (
+                                        <>
+                                            <p className="text-2xl font-bold mb-2">무료</p>
+                                            <p className="text-sm text-slate-400 mb-6">누구나 시청 가능</p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <p className="text-2xl font-bold mb-2">멤버십 전용</p>
+                                            <p className="text-sm text-slate-400 mb-6">토큰포스트 멤버십 회원 무제한</p>
+                                        </>
+                                    )}
+                                    <Link href={`/courses/${slug}/lesson/${firstLesson.id}`}>
+                                        <Button className={`w-full mb-3 ${course.isFree ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400' : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500'} shadow-lg`}>
+                                            강의 시작하기
+                                        </Button>
+                                    </Link>
+                                    {!course.isFree && (
+                                        <a href="https://www.tokenpost.kr/membership" target="_blank" rel="noopener noreferrer">
+                                            <Button variant="outline" className="w-full border-white/10 text-slate-400 hover:text-white hover:bg-white/5">
+                                                멤버십 알아보기
+                                            </Button>
+                                        </a>
+                                    )}
                                 </div>
-
-                                <div className="text-3xl font-bold text-white">
-                                    {course.price.toLocaleString()}원
-                                </div>
-
-                                <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" size="lg">
-                                    수강 신청하기
-                                </Button>
-
-                                <p className="text-center text-sm text-slate-500">
-                                    30일 환불 보장
-                                </p>
-
-                                <Separator className="bg-slate-700" />
-
-                                <div className="space-y-2 text-sm">
-                                    <div className="flex justify-between text-slate-400">
-                                        <span>강의 수</span>
-                                        <span className="text-white">{totalLessons}개</span>
-                                    </div>
-                                    <div className="flex justify-between text-slate-400">
-                                        <span>총 시간</span>
-                                        <span className="text-white">{course.duration}</span>
-                                    </div>
-                                    <div className="flex justify-between text-slate-400">
-                                        <span>수강 기한</span>
-                                        <span className="text-white">무제한</span>
-                                    </div>
-                                    <div className="flex justify-between text-slate-400">
-                                        <span>수료증</span>
-                                        <span className="text-white">발급 가능</span>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            {/* 콘텐츠 섹션 */}
-            <div className="max-w-6xl mx-auto px-6 py-12">
-                <Tabs defaultValue="curriculum" className="space-y-8">
-                    <TabsList className="bg-slate-800/50 border border-slate-700">
-                        <TabsTrigger value="curriculum">커리큘럼</TabsTrigger>
-                        <TabsTrigger value="overview">강의 소개</TabsTrigger>
-                        <TabsTrigger value="instructor">강사 소개</TabsTrigger>
-                    </TabsList>
+                    {/* Curriculum */}
+                    <section>
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-1 h-6 rounded-full bg-gradient-to-b from-blue-500 to-purple-500" />
+                            <h2 className="text-xl font-semibold">커리큘럼</h2>
+                            <span className="text-sm text-slate-500">{allLessons.length}개 레슨</span>
+                        </div>
 
-                    {/* 커리큘럼 */}
-                    <TabsContent value="curriculum" className="space-y-4">
-                        {course.modules.map((module, idx) => (
-                            <Card key={module.id} className="bg-slate-800/50 border-slate-700">
-                                <CardHeader>
-                                    <CardTitle className="text-lg text-white">
-                                        섹션 {idx + 1}. {module.title}
-                                    </CardTitle>
-                                    <CardDescription className="text-slate-400">
-                                        {module.lessons.length}개 강의
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-2">
-                                    {module.lessons.map((lesson) => (
-                                        <div
-                                            key={lesson.id}
-                                            className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-700/50 transition"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-slate-500">▶</span>
-                                                <span className="text-slate-300">{lesson.title}</span>
-                                                {lesson.isFree && (
-                                                    <Badge variant="secondary" className="bg-blue-500/20 text-blue-400 text-xs">
-                                                        무료 미리보기
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                            <span className="text-sm text-slate-500">{lesson.duration}</span>
+                        <div className="space-y-4">
+                            {CURRICULUM.map((module, moduleIndex) => (
+                                <div key={module.id} className="rounded-2xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 overflow-hidden">
+                                    <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <span className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm font-medium text-slate-400">
+                                                {moduleIndex + 1}
+                                            </span>
+                                            <h3 className="font-semibold">{module.title}</h3>
                                         </div>
-                                    ))}
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </TabsContent>
-
-                    {/* 강의 소개 */}
-                    <TabsContent value="overview">
-                        <Card className="bg-slate-800/50 border-slate-700">
-                            <CardHeader>
-                                <CardTitle className="text-white">이 강의에서 배우는 것</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {course.whatYouLearn.map((item, idx) => (
-                                        <li key={idx} className="flex items-start gap-2 text-slate-300">
-                                            <span className="text-green-400 mt-1">✓</span>
-                                            {item}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    {/* 강사 소개 */}
-                    <TabsContent value="instructor">
-                        <Card className="bg-slate-800/50 border-slate-700">
-                            <CardContent className="p-6">
-                                <div className="flex items-start gap-4">
-                                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-                                        {course.instructor.name[0]}
+                                        <span className="text-sm text-slate-500">{module.lessons.length}개 레슨</span>
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-semibold text-white">{course.instructor.name}</h3>
-                                        <p className="text-slate-400 mb-4">{course.instructor.title}</p>
-                                        <p className="text-slate-300">{course.instructor.bio}</p>
+                                        {module.lessons.map((lesson, lessonIndex) => (
+                                            <Link
+                                                key={lesson.id}
+                                                href={`/courses/${slug}/lesson/${lesson.id}`}
+                                                className="flex items-center gap-4 px-6 py-4 hover:bg-white/5 transition border-b border-white/5 last:border-0"
+                                            >
+                                                <span className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-xs text-slate-500">
+                                                    {lessonIndex + 1}
+                                                </span>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-slate-300">{lesson.title}</span>
+                                                        {lesson.isFreePreview && (
+                                                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/20 text-emerald-400">
+                                                                무료
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <span className="text-sm text-slate-500">{lesson.duration}</span>
+                                                <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                            </Link>
+                                        ))}
                                     </div>
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                </Tabs>
-            </div>
+                            ))}
+                        </div>
+                    </section>
+                </div>
+            </main>
         </div>
     )
 }
