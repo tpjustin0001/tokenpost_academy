@@ -11,47 +11,7 @@ import { VideoPlayer } from '@/components/player/VideoPlayer'
 import { Button } from '@/components/ui/button'
 import { getVideoToken } from '@/actions/stream'
 import { SubscriptionPrompt, VideoPlaceholder } from '@/components/auth/SubscriptionPrompt'
-
-interface Lesson {
-    id: string
-    title: string
-    duration: string
-    isCompleted?: boolean
-    isFreePreview?: boolean
-}
-
-interface Module {
-    id: string
-    title: string
-    lessons: Lesson[]
-}
-
-const MOCK_CURRICULUM: Module[] = [
-    {
-        id: 'module-1',
-        title: '블록체인 기초',
-        lessons: [
-            { id: 'lesson-1', title: '블록체인이란 무엇인가?', duration: '15:30', isCompleted: true, isFreePreview: true },
-            { id: 'lesson-2', title: '탈중앙화의 의미', duration: '12:45', isCompleted: true },
-            { id: 'lesson-3', title: '합의 알고리즘 이해하기', duration: '18:20', isCompleted: false },
-        ],
-    },
-    {
-        id: 'module-2',
-        title: '스마트 컨트랙트',
-        lessons: [
-            { id: 'lesson-4', title: '스마트 컨트랙트 개념', duration: '14:00', isCompleted: false },
-            { id: 'lesson-5', title: 'Solidity 기초 문법', duration: '22:15', isCompleted: false },
-            { id: 'lesson-6', title: '첫 번째 컨트랙트 작성하기', duration: '25:30', isCompleted: false },
-        ],
-    },
-]
-
-const MOCK_LESSON = {
-    title: '합의 알고리즘 이해하기',
-    description: 'PoW, PoS, DPoS 등 주요 합의 알고리즘의 작동 원리와 각각의 장단점을 자세히 알아봅니다. 실제 블록체인 프로젝트들이 어떤 합의 알고리즘을 사용하는지도 살펴봅니다.',
-    videoToken: 'mock-video-token',
-}
+import { getCourseBySlug, Lesson } from '@/data/courses'
 
 export default function ClassroomPage() {
     const params = useParams()
@@ -67,14 +27,15 @@ export default function ClassroomPage() {
     const courseSlug = params.slug as string
     const lessonId = params.lessonId as string
 
-    const allLessons = MOCK_CURRICULUM.flatMap(m => m.lessons)
+    const course = getCourseBySlug(courseSlug)
+    const allLessons = course?.sections.flatMap(s => s.lessons) || []
     const currentLesson = allLessons.find(l => l.id === lessonId)
     const currentIndex = allLessons.findIndex(l => l.id === lessonId)
     const isFreePreview = currentLesson?.isFreePreview || false
 
     const totalLessons = allLessons.length
     const completedLessons = allLessons.filter(l => l.isCompleted).length
-    const overallProgress = Math.round((completedLessons / totalLessons) * 100)
+    const overallProgress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
 
     useEffect(() => {
         async function checkAccessAndGetToken() {
@@ -90,7 +51,7 @@ export default function ClassroomPage() {
                     if (result.success && result.token) {
                         setVideoToken(result.token)
                     } else {
-                        setVideoToken(MOCK_LESSON.videoToken)
+                        setVideoToken('mock-video-token')
                     }
                 } else {
                     setHasAccess(false)
@@ -123,9 +84,20 @@ export default function ClassroomPage() {
     const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null
     const nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null
 
+    if (!course) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
+                <div className="text-center">
+                    <p className="text-slate-400 mb-4">강의를 찾을 수 없습니다</p>
+                    <Button onClick={() => router.push('/')}>홈으로 돌아가기</Button>
+                </div>
+            </div>
+        )
+    }
+
     if (error) {
         return (
-            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
                 <div className="text-center">
                     <p className="text-red-400 mb-4">{error}</p>
                     <Button onClick={() => router.back()}>돌아가기</Button>
@@ -163,12 +135,15 @@ export default function ClassroomPage() {
                             </div>
                             <span className="font-semibold hidden sm:block">Academy</span>
                         </Link>
+                        <div className="hidden md:block pl-4 border-l border-white/10">
+                            <p className="text-sm text-slate-400 truncate max-w-xs">{course.title}</p>
+                        </div>
                     </div>
 
                     {/* Progress */}
                     <div className="hidden md:flex items-center gap-4">
                         <div className="text-sm text-slate-400">
-                            {currentIndex + 1} / {totalLessons} 강의
+                            {currentIndex + 1} / {totalLessons}
                         </div>
                         <div className="w-40 h-1.5 bg-white/5 rounded-full overflow-hidden">
                             <div
@@ -220,7 +195,7 @@ export default function ClassroomPage() {
                                 <div>
                                     <div className="flex items-center gap-2 mb-2">
                                         <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                            레슨 {currentIndex + 1}
+                                            Phase {course.phase} · 레슨 {currentIndex + 1}
                                         </span>
                                         {isFreePreview && (
                                             <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/20 text-emerald-400">
@@ -229,15 +204,13 @@ export default function ClassroomPage() {
                                         )}
                                     </div>
                                     <h1 className="text-2xl font-semibold">
-                                        {currentLesson?.title || MOCK_LESSON.title}
+                                        {currentLesson?.title}
                                     </h1>
+                                    {currentLesson?.titleEn && (
+                                        <p className="text-sm text-slate-500 mt-1">{currentLesson.titleEn}</p>
+                                    )}
                                 </div>
                             </div>
-
-                            {/* Description */}
-                            <p className="text-slate-400 leading-relaxed mb-6">
-                                {MOCK_LESSON.description}
-                            </p>
 
                             {/* Progress Bar */}
                             {hasAccess && (
@@ -302,12 +275,12 @@ export default function ClassroomPage() {
 
                         {/* Lesson List */}
                         <div className="flex-1 overflow-y-auto">
-                            {MOCK_CURRICULUM.map((module) => (
-                                <div key={module.id}>
+                            {course.sections.map((section) => (
+                                <div key={section.id}>
                                     <div className="px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider bg-white/[0.02] sticky top-0 backdrop-blur">
-                                        {module.title}
+                                        {section.title}
                                     </div>
-                                    {module.lessons.map((lesson) => {
+                                    {section.lessons.map((lesson) => {
                                         const lessonIndex = allLessons.findIndex(l => l.id === lesson.id)
                                         const isActive = lesson.id === lessonId
 

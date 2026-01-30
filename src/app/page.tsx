@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { ALL_COURSES, getTotalLessons, getTotalDuration } from '@/data/courses'
 
 // SVG 아이콘 컴포넌트
 const Icons = {
@@ -22,31 +23,6 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
     </svg>
   ),
-  blockchain: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-    </svg>
-  ),
-  defi: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  nft: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </svg>
-  ),
-  trading: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-    </svg>
-  ),
-  dev: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-    </svg>
-  ),
 }
 
 // 사이드바 메뉴
@@ -54,107 +30,27 @@ const SIDEBAR_MENU = [
   { icon: Icons.home, label: '홈', href: '/' },
   { icon: Icons.courses, label: '전체 강의', href: '/courses' },
   { icon: Icons.progress, label: '내 학습', href: '/my-courses' },
-  { type: 'divider' },
-  { icon: Icons.blockchain, label: '블록체인', href: '/category/blockchain' },
-  { icon: Icons.defi, label: 'DeFi', href: '/category/defi' },
-  { icon: Icons.nft, label: 'NFT', href: '/category/nft' },
-  { icon: Icons.trading, label: '트레이딩', href: '/category/trading' },
-  { icon: Icons.dev, label: '개발', href: '/category/development' },
 ]
 
-const COURSES = [
-  {
-    id: 'blockchain-basics',
-    slug: 'blockchain-basics',
-    title: '블록체인 기초 입문',
-    description: '누구나 쉽게 배우는 블록체인의 기본 개념',
-    lessons: 10,
-    duration: '2시간',
-    level: '입문',
-    category: '블록체인',
-    isFree: true,
-    progress: 0,
-    gradient: 'from-emerald-500 to-teal-600',
-  },
-  {
-    id: 'web3-fundamentals',
-    slug: 'web3-fundamentals',
-    title: '웹3 핵심 개념',
-    description: '블록체인부터 DeFi까지 Web3의 모든 것',
-    lessons: 24,
-    duration: '4시간 30분',
-    level: '입문',
-    category: '블록체인',
-    isFree: false,
-    progress: 45,
-    gradient: 'from-blue-500 to-indigo-600',
-  },
-  {
-    id: 'defi-masterclass',
-    slug: 'defi-masterclass',
-    title: 'DeFi 마스터클래스',
-    description: 'DEX, Lending, Yield Farming 완벽 가이드',
-    lessons: 36,
-    duration: '6시간 15분',
-    level: '중급',
-    category: 'DeFi',
-    isFree: false,
-    progress: 0,
-    gradient: 'from-purple-500 to-pink-600',
-  },
-  {
-    id: 'nft-development',
-    slug: 'nft-development',
-    title: 'NFT 스마트 컨트랙트',
-    description: 'ERC-721/1155 실전 개발 가이드',
-    lessons: 18,
-    duration: '3시간 45분',
-    level: '고급',
-    category: 'NFT',
-    isFree: false,
-    progress: 0,
-    gradient: 'from-orange-500 to-rose-600',
-  },
-  {
-    id: 'crypto-trading',
-    slug: 'crypto-trading',
-    title: '암호화폐 트레이딩',
-    description: '차트 분석과 리스크 관리 실전',
-    lessons: 30,
-    duration: '5시간 30분',
-    level: '중급',
-    category: '트레이딩',
-    isFree: false,
-    progress: 20,
-    gradient: 'from-cyan-500 to-blue-600',
-  },
-  {
-    id: 'solidity-basics',
-    slug: 'solidity-basics',
-    title: 'Solidity 개발 입문',
-    description: '스마트 컨트랙트 개발의 첫 걸음',
-    lessons: 42,
-    duration: '8시간',
-    level: '입문',
-    category: '개발',
-    isFree: false,
-    progress: 0,
-    gradient: 'from-violet-500 to-purple-600',
-  },
+// Phase 컬러
+const PHASE_COLORS = [
+  { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400', dot: 'bg-emerald-500' },
+  { bg: 'bg-blue-500/10', border: 'border-blue-500/20', text: 'text-blue-400', dot: 'bg-blue-500' },
+  { bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', text: 'text-yellow-400', dot: 'bg-yellow-500' },
+  { bg: 'bg-orange-500/10', border: 'border-orange-500/20', text: 'text-orange-400', dot: 'bg-orange-500' },
+  { bg: 'bg-purple-500/10', border: 'border-purple-500/20', text: 'text-purple-400', dot: 'bg-purple-500' },
+  { bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-400', dot: 'bg-red-500' },
+  { bg: 'bg-slate-500/10', border: 'border-slate-500/20', text: 'text-slate-400', dot: 'bg-slate-500' },
 ]
 
 export default function Home() {
   const pathname = usePathname()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
-  const freeCourses = COURSES.filter(c => c.isFree)
-  const membershipCourses = COURSES.filter(c => !c.isFree)
-  const inProgressCourses = COURSES.filter(c => c.progress > 0)
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
       {/* Background Pattern */}
-      <div className="fixed inset-0 opacity-30">
+      <div className="fixed inset-0 opacity-30 pointer-events-none">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-transparent to-transparent" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-purple-900/10 via-transparent to-transparent" />
       </div>
@@ -183,10 +79,7 @@ export default function Home() {
 
         {/* Menu */}
         <nav className="flex-1 px-3 py-4 overflow-y-auto">
-          {SIDEBAR_MENU.map((item, i) => {
-            if (item.type === 'divider') {
-              return <div key={i} className="my-4 border-t border-white/5" />
-            }
+          {SIDEBAR_MENU.map((item) => {
             const isActive = pathname === item.href
             return (
               <Link
@@ -202,6 +95,26 @@ export default function Home() {
               </Link>
             )
           })}
+
+          {/* Phase 목록 */}
+          {!sidebarCollapsed && (
+            <>
+              <div className="my-4 border-t border-white/5" />
+              <p className="px-4 mb-3 text-xs font-medium text-slate-500 uppercase tracking-wider">
+                커리큘럼
+              </p>
+              {ALL_COURSES.map((course, i) => (
+                <Link
+                  key={course.id}
+                  href={`/courses/${course.slug}`}
+                  className="flex items-center gap-3 px-4 py-2.5 mb-0.5 rounded-lg text-slate-400 hover:bg-white/5 hover:text-white transition-all"
+                >
+                  <div className={`w-2 h-2 rounded-full ${PHASE_COLORS[i].dot}`} />
+                  <span className="text-sm truncate">Phase {course.phase}</span>
+                </Link>
+              ))}
+            </>
+          )}
         </nav>
 
         {/* Collapse Button */}
@@ -234,8 +147,8 @@ export default function Home() {
         <header className="sticky top-0 z-30 backdrop-blur-xl bg-slate-950/60 border-b border-white/5">
           <div className="h-20 px-8 flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">강의 라이브러리</h1>
-              <p className="text-sm text-slate-400 mt-0.5">토큰포스트 멤버십 전용 교육 플랫폼</p>
+              <h1 className="text-2xl font-semibold tracking-tight">커리큘럼</h1>
+              <p className="text-sm text-slate-400 mt-0.5">총 {getTotalLessons()}개 강의 · {getTotalDuration()}</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="relative">
@@ -254,112 +167,91 @@ export default function Home() {
 
         {/* Content */}
         <div className="p-8">
-          {/* Progress Section */}
-          {inProgressCourses.length > 0 && (
-            <section className="mb-12">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-1 h-6 rounded-full bg-gradient-to-b from-blue-500 to-purple-500" />
-                <h2 className="text-xl font-semibold">학습 중</h2>
+          {/* Hero Banner */}
+          <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600/20 via-purple-600/10 to-blue-600/20 border border-white/10 p-8 mb-12">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5" />
+            <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+            <div className="relative">
+              <p className="text-sm font-medium text-blue-400 mb-2">TokenPost Academy</p>
+              <h2 className="text-3xl font-bold mb-3">암호화폐 투자 마스터 코스</h2>
+              <p className="text-slate-400 max-w-2xl mb-6">
+                입문부터 고급까지, 7개의 Phase로 구성된 체계적인 커리큘럼으로
+                암호화폐 투자의 모든 것을 배워보세요.
+              </p>
+              <div className="flex items-center gap-6 text-sm">
+                <div className="flex items-center gap-2 text-slate-300">
+                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <span>{getTotalLessons()}개 강의</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{getTotalDuration()}</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                  </svg>
+                  <span>7개 Phase</span>
+                </div>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {inProgressCourses.map((course) => (
-                  <Link key={course.id} href={`/courses/${course.slug}`}>
-                    <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 p-6 hover:border-white/20 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/5">
-                      <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${course.gradient} opacity-10 blur-3xl transition-opacity group-hover:opacity-20`} />
-                      <div className="relative">
-                        <div className="flex items-start justify-between mb-4">
-                          <div>
-                            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">{course.category}</p>
-                            <h3 className="text-lg font-semibold group-hover:text-blue-400 transition-colors">{course.title}</h3>
-                          </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${course.gradient} text-white shadow-lg`}>
-                            {course.progress}%
+            </div>
+          </section>
+
+          {/* Course Grid */}
+          <div className="space-y-6">
+            {ALL_COURSES.map((course, i) => {
+              const colors = PHASE_COLORS[i]
+              return (
+                <Link key={course.id} href={`/courses/${course.slug}`}>
+                  <div className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br from-white/5 to-white/[0.02] border ${colors.border} p-6 hover:border-white/20 transition-all duration-300 hover:shadow-xl`}>
+                    <div className={`absolute top-0 right-0 w-48 h-48 bg-gradient-to-br ${course.gradient} opacity-5 blur-3xl transition-opacity group-hover:opacity-10`} />
+
+                    <div className="relative flex flex-col md:flex-row md:items-center gap-4">
+                      {/* Phase Badge */}
+                      <div className={`flex-shrink-0 w-16 h-16 rounded-2xl ${colors.bg} flex items-center justify-center`}>
+                        <span className={`text-2xl font-bold ${colors.text}`}>{course.phase}</span>
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-1">
+                          <h3 className="text-xl font-semibold group-hover:text-blue-400 transition-colors">
+                            {course.title}
+                          </h3>
+                          <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${colors.bg} ${colors.text}`}>
+                            {course.level}
                           </span>
                         </div>
-                        <p className="text-sm text-slate-400 mb-4">{course.description}</p>
-                        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                          <div className={`h-full bg-gradient-to-r ${course.gradient} transition-all shadow-lg`} style={{ width: `${course.progress}%` }} />
-                        </div>
-                        <p className="text-xs text-slate-500 mt-3">{course.lessons}개 레슨 · {course.duration}</p>
+                        <p className="text-sm text-slate-500 mb-2">{course.subtitle}</p>
+                        <p className="text-sm text-slate-400 line-clamp-2">{course.description}</p>
                       </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
 
-          {/* Free Courses */}
-          <section className="mb-12">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-1 h-6 rounded-full bg-gradient-to-b from-emerald-500 to-teal-500" />
-              <h2 className="text-xl font-semibold">무료 강의</h2>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                FREE
-              </span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {freeCourses.map((course) => (
-                <Link key={course.id} href={`/courses/${course.slug}`}>
-                  <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-emerald-500/20 p-5 hover:border-emerald-500/40 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/5">
-                    <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${course.gradient} opacity-10 blur-2xl`} />
-                    <div className="relative">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/20 text-emerald-400">
-                          무료
-                        </span>
-                        <span className="text-xs text-slate-500">{course.duration}</span>
+                      {/* Meta */}
+                      <div className="flex md:flex-col items-center md:items-end gap-3 md:gap-1 text-sm text-slate-500">
+                        <span>{course.lessonsCount}개 강의</span>
+                        <span>{course.duration}</span>
                       </div>
-                      <h3 className="font-semibold text-lg mb-2 group-hover:text-emerald-400 transition-colors">{course.title}</h3>
-                      <p className="text-sm text-slate-400 line-clamp-2">{course.description}</p>
-                      <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/5 text-xs text-slate-500">
-                        <span>{course.lessons}개 레슨</span>
-                        <span>·</span>
-                        <span>{course.level}</span>
+
+                      {/* Arrow */}
+                      <div className="hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/5 group-hover:bg-blue-500/20 transition-colors">
+                        <svg className="w-5 h-5 text-slate-400 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
                       </div>
                     </div>
                   </div>
                 </Link>
-              ))}
-            </div>
-          </section>
-
-          {/* Membership Courses */}
-          <section className="mb-12">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-1 h-6 rounded-full bg-gradient-to-b from-blue-500 to-purple-500" />
-              <h2 className="text-xl font-semibold">멤버십 전용</h2>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                MEMBERS
-              </span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {membershipCourses.map((course) => (
-                <Link key={course.id} href={`/courses/${course.slug}`}>
-                  <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 p-5 hover:border-blue-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/5">
-                    <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${course.gradient} opacity-10 blur-2xl transition-opacity group-hover:opacity-20`} />
-                    <div className="relative">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-500/20 text-blue-400">
-                          멤버십
-                        </span>
-                        <span className="text-xs text-slate-500">{course.duration}</span>
-                      </div>
-                      <h3 className="font-semibold text-lg mb-2 group-hover:text-blue-400 transition-colors">{course.title}</h3>
-                      <p className="text-sm text-slate-400 line-clamp-2">{course.description}</p>
-                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
-                        <span className="text-xs text-slate-500">{course.lessons}개 레슨 · {course.level}</span>
-                        <span className="text-xs text-slate-600">{course.category}</span>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
+              )
+            })}
+          </div>
 
           {/* Membership Banner */}
-          <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-blue-600/10 border border-white/10 p-8">
+          <section className="mt-12 relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-blue-600/10 border border-white/10 p-8">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5" />
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl" />
             <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" />
