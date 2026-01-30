@@ -1,325 +1,289 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
-// 추천 강의
-const FEATURED_COURSES = [
+// 카테고리
+const CATEGORIES = [
+  { id: 'all', label: '전체', active: true },
+  { id: 'blockchain', label: '블록체인' },
+  { id: 'defi', label: 'DeFi' },
+  { id: 'nft', label: 'NFT' },
+  { id: 'trading', label: '트레이딩' },
+  { id: 'development', label: '개발' },
+  { id: 'beginner', label: '입문자용' },
+]
+
+// 강의 목록 (YouTube 스타일)
+const COURSES = [
   {
     id: 'web3-fundamentals',
-    title: '웹3 핵심 개념 완벽 정리',
-    description: '블록체인, 스마트 컨트랙트, DeFi의 기초부터 심화까지',
-    instructor: '김토큰',
-    lessons: 24,
-    level: '입문',
+    slug: 'web3-fundamentals',
     thumbnail: '🌐',
-    color: 'from-blue-500 to-cyan-500',
+    thumbnailBg: 'from-blue-600 to-cyan-500',
+    title: '웹3 핵심 개념 완벽 정리 - 블록체인부터 DeFi까지',
+    instructor: '김토큰',
+    instructorAvatar: '👨‍💻',
+    views: '12.5만',
+    duration: '24강',
+    uploadedAt: '2주 전',
+    verified: true,
   },
   {
     id: 'defi-masterclass',
-    title: 'DeFi 마스터클래스',
-    description: 'DEX, Lending, Yield Farming 전략 완벽 가이드',
-    instructor: '이디파이',
-    lessons: 36,
-    level: '중급',
+    slug: 'defi-masterclass',
     thumbnail: '💰',
-    color: 'from-purple-500 to-pink-500',
+    thumbnailBg: 'from-purple-600 to-pink-500',
+    title: 'DeFi 마스터클래스 - DEX, Lending, Yield Farming 완벽 가이드',
+    instructor: '이디파이',
+    instructorAvatar: '👩‍💼',
+    views: '8.3만',
+    duration: '36강',
+    uploadedAt: '1개월 전',
+    verified: true,
   },
   {
     id: 'nft-development',
-    title: 'NFT 개발 실전 가이드',
-    description: 'ERC-721/1155 스마트 컨트랙트 개발 및 마켓플레이스 구축',
-    instructor: '박엔프티',
-    lessons: 18,
-    level: '고급',
+    slug: 'nft-development',
     thumbnail: '🎨',
-    color: 'from-orange-500 to-red-500',
+    thumbnailBg: 'from-orange-500 to-red-500',
+    title: 'NFT 개발 실전 가이드 - ERC-721/1155 스마트 컨트랙트',
+    instructor: '박엔프티',
+    instructorAvatar: '🧑‍🎨',
+    views: '5.7만',
+    duration: '18강',
+    uploadedAt: '3주 전',
+    verified: false,
+  },
+  {
+    id: 'solidity-basics',
+    slug: 'solidity-basics',
+    thumbnail: '⚡',
+    thumbnailBg: 'from-yellow-500 to-orange-500',
+    title: 'Solidity 기초부터 실전까지 - 스마트 컨트랙트 개발 입문',
+    instructor: '최솔리디',
+    instructorAvatar: '👨‍🔬',
+    views: '15.2만',
+    duration: '42강',
+    uploadedAt: '1주 전',
+    verified: true,
+  },
+  {
+    id: 'crypto-trading',
+    slug: 'crypto-trading',
+    thumbnail: '📈',
+    thumbnailBg: 'from-green-500 to-emerald-500',
+    title: '암호화폐 트레이딩 전략 - 차트 분석과 리스크 관리',
+    instructor: '정트레이더',
+    instructorAvatar: '📊',
+    views: '22.1만',
+    duration: '30강',
+    uploadedAt: '5일 전',
+    verified: true,
+  },
+  {
+    id: 'ethereum-deep-dive',
+    slug: 'ethereum-deep-dive',
+    thumbnail: '💎',
+    thumbnailBg: 'from-indigo-500 to-purple-500',
+    title: '이더리움 심층 분석 - EVM, Gas, Layer 2 완벽 이해',
+    instructor: '한이더',
+    instructorAvatar: '🔷',
+    views: '9.8만',
+    duration: '28강',
+    uploadedAt: '2개월 전',
+    verified: true,
   },
 ]
 
-const STATS = [
-  { number: '50+', label: '전문 강의' },
-  { number: '10,000+', label: '수강생' },
-  { number: '200+', label: '시간 콘텐츠' },
-  { number: '98%', label: '만족도' },
-]
-
-const FEATURES = [
-  {
-    icon: '🔐',
-    title: '보안 스트리밍',
-    description: 'Cloudflare Stream 기반 DRM 보호로 콘텐츠를 안전하게 제공합니다.',
-  },
-  {
-    icon: '📊',
-    title: '학습 분석',
-    description: '실시간 진도 추적과 학습 패턴 분석으로 효율적인 학습을 지원합니다.',
-  },
-  {
-    icon: '🎯',
-    title: '맞춤형 커리큘럼',
-    description: '레벨별 맞춤 강의로 입문자부터 전문가까지 모두를 위한 콘텐츠.',
-  },
-  {
-    icon: '💬',
-    title: '커뮤니티',
-    description: '전문가와 수강생이 함께하는 활발한 Q&A 커뮤니티를 제공합니다.',
-  },
+// 사이드바 메뉴
+const SIDEBAR_MENU = [
+  { icon: '🏠', label: '홈', href: '/', active: true },
+  { icon: '🔥', label: '인기', href: '/courses' },
+  { icon: '📚', label: '구독', href: '/dashboard' },
+  { divider: true },
+  { icon: '📁', label: '보관함', href: '/dashboard' },
+  { icon: '⏰', label: '나중에 볼 강의', href: '/dashboard' },
+  { icon: '👍', label: '좋아요 표시한 강의', href: '/dashboard' },
+  { divider: true },
+  { icon: '⚙️', label: '설정', href: '#' },
 ]
 
 export default function Home() {
-  const [isVisible, setIsVisible] = useState(false)
-
-  useEffect(() => {
-    setIsVisible(true)
-  }, [])
+  const [activeCategory, setActiveCategory] = useState('all')
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white overflow-hidden">
-      {/* Animated Background */}
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-purple-900/10 to-[#0a0a0f]" />
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-radial from-blue-500/5 to-transparent rounded-full" />
-      </div>
-
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#0a0a0f]/70 border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/25 group-hover:shadow-blue-500/40 transition-all">
-                TP
-              </div>
-              <div className="flex flex-col">
-                <span className="text-lg font-bold tracking-tight">TokenPost</span>
-                <span className="text-xs text-slate-400 -mt-1">Academy</span>
-              </div>
-            </Link>
-            <div className="hidden md:flex items-center gap-8">
-              <Link href="/courses" className="text-slate-300 hover:text-white transition font-medium">
-                강의
-              </Link>
-              <Link href="/dashboard" className="text-slate-300 hover:text-white transition font-medium">
-                대시보드
-              </Link>
-              <Link href="/login">
-                <Button className="bg-white/10 hover:bg-white/20 backdrop-blur border border-white/10">
-                  로그인
-                </Button>
-              </Link>
+    <div className="min-h-screen bg-[#0f0f0f] text-white">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 h-14 bg-[#0f0f0f] border-b border-white/10 z-50 flex items-center px-4">
+        {/* Left */}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 hover:bg-white/10 rounded-full transition"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <Link href="/" className="flex items-center gap-1">
+            <div className="w-8 h-8 rounded bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-sm font-bold">
+              TP
             </div>
-          </div>
+            <span className="text-xl font-semibold tracking-tight">Academy</span>
+          </Link>
         </div>
-      </nav>
 
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center pt-20">
-        <div className="max-w-7xl mx-auto px-6 py-24 lg:py-32">
-          <div className={`max-w-4xl transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 mb-8">
-              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-sm text-slate-300">토큰포스트 구독자 전용 프리미엄 콘텐츠</span>
-            </div>
-
-            <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-8">
-              <span className="bg-gradient-to-r from-white via-white to-slate-400 bg-clip-text text-transparent">
-                Web3 시대를 위한
-              </span>
-              <br />
-              <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                프리미엄 학습 플랫폼
-              </span>
-            </h1>
-
-            <p className="text-xl md:text-2xl text-slate-400 mb-12 max-w-2xl leading-relaxed">
-              블록체인, DeFi, NFT 분야 최고 전문가들이 직접 제작한 강의로
-              <span className="text-white font-medium"> Web3 개발자</span>로 성장하세요.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/courses">
-                <Button size="lg" className="w-full sm:w-auto h-14 px-8 text-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all">
-                  지금 시작하기
-                  <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
-                </Button>
-              </Link>
-              <Link href="/courses">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto h-14 px-8 text-lg border-white/20 hover:bg-white/10">
-                  강의 둘러보기
-                </Button>
-              </Link>
-            </div>
+        {/* Center - Search */}
+        <div className="flex-1 max-w-2xl mx-auto px-4">
+          <div className="flex">
+            <input
+              type="text"
+              placeholder="강의 검색"
+              className="flex-1 h-10 px-4 bg-[#121212] border border-white/20 rounded-l-full text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            />
+            <button className="h-10 px-6 bg-white/10 border border-l-0 border-white/20 rounded-r-full hover:bg-white/20 transition">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
           </div>
         </div>
 
-        {/* Scroll Indicator */}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce">
-          <div className="w-6 h-10 rounded-full border-2 border-white/20 flex justify-center pt-2">
-            <div className="w-1 h-2 rounded-full bg-white/40 animate-pulse" />
-          </div>
+        {/* Right */}
+        <div className="flex items-center gap-2">
+          <Link href="/login">
+            <Button className="bg-transparent hover:bg-white/10 border border-blue-500 text-blue-500 rounded-full px-4">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              로그인
+            </Button>
+          </Link>
         </div>
-      </section>
+      </header>
 
-      {/* Stats Section */}
-      <section className="py-20 border-y border-white/5 bg-white/[0.02]">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {STATS.map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
-                  {stat.number}
-                </div>
-                <div className="text-slate-400">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Courses */}
-      <section className="py-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-blue-500/10 text-blue-400 border-blue-500/20">인기 강의</Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              <span className="bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-                전문가가 만든 프리미엄 콘텐츠
-              </span>
-            </h2>
-            <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-              현업 전문가들이 직접 제작한 실전 노하우를 담은 강의
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {FEATURED_COURSES.map((course, i) => (
-              <Link key={course.id} href={`/courses/${course.id}`}>
-                <Card className={`group h-full bg-white/[0.03] border-white/10 hover:border-white/20 backdrop-blur transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-${course.color.split('-')[1]}-500/10`}>
-                  <CardHeader className="pb-4">
-                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${course.color} flex items-center justify-center text-3xl mb-4 shadow-lg group-hover:scale-110 transition-transform`}>
-                      {course.thumbnail}
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="outline" className="text-xs text-slate-400 border-slate-700 bg-white/5">
-                        {course.level}
-                      </Badge>
-                      <span className="text-xs text-slate-500">{course.lessons}개 레슨</span>
-                    </div>
-                    <CardTitle className="text-xl text-white group-hover:text-blue-300 transition-colors">
-                      {course.title}
-                    </CardTitle>
-                    <CardDescription className="text-slate-400 line-clamp-2">
-                      {course.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-3 pt-4 border-t border-white/5">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center text-sm">
-                        👤
-                      </div>
-                      <span className="text-sm text-slate-400">{course.instructor}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-
-          <div className="text-center mt-12">
-            <Link href="/courses">
-              <Button variant="outline" size="lg" className="border-white/20 hover:bg-white/10">
-                전체 강의 보기
-                <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-24 bg-gradient-to-b from-transparent via-blue-950/10 to-transparent">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-purple-500/10 text-purple-400 border-purple-500/20">플랫폼 특징</Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              <span className="bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-                왜 TokenPost Academy인가?
-              </span>
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {FEATURES.map((feature, i) => (
-              <div
+      {/* Sidebar */}
+      <aside className={`fixed top-14 left-0 bottom-0 bg-[#0f0f0f] z-40 transition-all duration-300 ${sidebarOpen ? 'w-60' : 'w-[72px]'}`}>
+        <nav className="py-3">
+          {SIDEBAR_MENU.map((item, i) => (
+            item.divider ? (
+              <div key={i} className="my-3 border-b border-white/10" />
+            ) : (
+              <Link
                 key={i}
-                className="p-8 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-white/20 transition-all group"
+                href={item.href || '#'}
+                className={`flex items-center gap-6 px-3 py-2.5 mx-1 rounded-lg transition ${item.active ? 'bg-white/10' : 'hover:bg-white/5'
+                  } ${sidebarOpen ? '' : 'flex-col gap-1 py-4'}`}
               >
-                <div className="text-4xl mb-4 group-hover:scale-110 transition-transform inline-block">
-                  {feature.icon}
-                </div>
-                <h3 className="text-xl font-bold text-white mb-3">{feature.title}</h3>
-                <p className="text-slate-400 leading-relaxed">{feature.description}</p>
-              </div>
+                <span className="text-xl">{item.icon}</span>
+                <span className={`text-sm ${sidebarOpen ? '' : 'text-[10px]'}`}>{item.label}</span>
+              </Link>
+            )
+          ))}
+        </nav>
+
+        {/* Subscriber Badge */}
+        {sidebarOpen && (
+          <div className="absolute bottom-4 left-3 right-3">
+            <div className="p-3 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-lg border border-white/10">
+              <p className="text-xs text-slate-400 mb-2">토큰포스트 구독자 전용</p>
+              <a href="https://www.tokenpost.kr/subscribe" target="_blank" rel="noopener noreferrer">
+                <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-sm">
+                  구독하기
+                </Button>
+              </a>
+            </div>
+          </div>
+        )}
+      </aside>
+
+      {/* Main Content */}
+      <main className={`pt-14 transition-all duration-300 ${sidebarOpen ? 'ml-60' : 'ml-[72px]'}`}>
+        {/* Category Chips */}
+        <div className="sticky top-14 bg-[#0f0f0f] z-30 border-b border-white/10">
+          <div className="flex items-center gap-3 px-6 py-3 overflow-x-auto scrollbar-hide">
+            {CATEGORIES.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setActiveCategory(category.id)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ${activeCategory === category.id
+                    ? 'bg-white text-black'
+                    : 'bg-white/10 hover:bg-white/20 text-white'
+                  }`}
+              >
+                {category.label}
+              </button>
             ))}
           </div>
         </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="py-24">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <div className="p-12 rounded-3xl bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-white/10 backdrop-blur">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">
-              지금 바로 Web3 전문가로의 여정을 시작하세요
-            </h2>
-            <p className="text-lg text-slate-400 mb-8 max-w-xl mx-auto">
-              토큰포스트 구독자라면 모든 프리미엄 강의를 무제한으로 수강할 수 있습니다.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/courses">
-                <Button size="lg" className="h-14 px-8 text-lg bg-white text-black hover:bg-slate-100">
-                  무료로 시작하기
-                </Button>
+        {/* Video Grid */}
+        <div className="p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {COURSES.map((course) => (
+              <Link key={course.id} href={`/courses/${course.slug}`} className="group">
+                {/* Thumbnail */}
+                <div className={`relative aspect-video rounded-xl bg-gradient-to-br ${course.thumbnailBg} flex items-center justify-center overflow-hidden`}>
+                  <span className="text-6xl group-hover:scale-110 transition-transform duration-300">
+                    {course.thumbnail}
+                  </span>
+                  {/* Duration Badge */}
+                  <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/80 rounded text-xs font-medium">
+                    {course.duration}
+                  </div>
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                </div>
+
+                {/* Info */}
+                <div className="flex gap-3 mt-3">
+                  {/* Avatar */}
+                  <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-lg flex-shrink-0">
+                    {course.instructorAvatar}
+                  </div>
+                  {/* Details */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-sm leading-5 line-clamp-2 group-hover:text-blue-400 transition-colors">
+                      {course.title}
+                    </h3>
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className="text-sm text-gray-400">{course.instructor}</span>
+                      {course.verified && (
+                        <svg className="w-3.5 h-3.5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      조회수 {course.views}회 · {course.uploadedAt}
+                    </div>
+                  </div>
+                </div>
               </Link>
-              <a href="https://www.tokenpost.kr/subscribe" target="_blank" rel="noopener noreferrer">
-                <Button size="lg" variant="outline" className="h-14 px-8 text-lg border-white/20 hover:bg-white/10">
-                  구독 알아보기
-                </Button>
-              </a>
-            </div>
+            ))}
           </div>
         </div>
-      </section>
 
-      {/* Footer */}
-      <footer className="py-12 border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
-                TP
-              </div>
-              <span className="text-slate-400">© 2026 TokenPost Academy</span>
+        {/* Premium Banner */}
+        <div className="mx-6 mb-6">
+          <div className="p-6 rounded-xl bg-gradient-to-r from-blue-900/50 to-purple-900/50 border border-white/10 flex items-center justify-between">
+            <div>
+              <Badge className="bg-yellow-500 text-black mb-2">Premium</Badge>
+              <h3 className="text-xl font-bold mb-1">토큰포스트 구독자 혜택</h3>
+              <p className="text-gray-400 text-sm">모든 프리미엄 강의 무제한 시청 + 광고 없는 학습</p>
             </div>
-            <div className="flex items-center gap-6 text-sm text-slate-500">
-              <a href="https://www.tokenpost.kr" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">
-                TokenPost
-              </a>
-              <a href="#" className="hover:text-white transition">이용약관</a>
-              <a href="#" className="hover:text-white transition">개인정보처리방침</a>
-            </div>
+            <a href="https://www.tokenpost.kr/subscribe" target="_blank" rel="noopener noreferrer">
+              <Button className="bg-white text-black hover:bg-gray-100 px-6">
+                자세히 보기
+              </Button>
+            </a>
           </div>
         </div>
-      </footer>
+      </main>
     </div>
   )
 }
