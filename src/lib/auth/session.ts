@@ -10,6 +10,7 @@ export type SessionPayload = {
     email: string
     role?: string
     name?: string
+    nickname?: string
     expiresAt: Date
 }
 

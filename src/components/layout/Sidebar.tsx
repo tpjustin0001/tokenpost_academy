@@ -29,7 +29,7 @@ const Icons = {
 const SIDEBAR_MENU = [
     { icon: Icons.home, label: '홈', href: '/' },
     { icon: Icons.courses, label: '전체 강의', href: '/courses' },
-    { icon: Icons.progress, label: '내 학습', href: '/my-courses' },
+    { icon: Icons.progress, label: '내 학습', href: '/dashboard' },
 ]
 
 // Phase 컬러
