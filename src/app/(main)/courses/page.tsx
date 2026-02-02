@@ -44,7 +44,7 @@ export default async function CoursesPage() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {courses.filter(c => c.is_published).map((course) => (
+                        {courses.filter(c => c.status === 'published').map((course) => (
                             <Link key={course.id} href={`/courses/${course.slug}`}>
                                 <Card className="bg-slate-800/50 border-slate-700 hover:border-slate-600 transition-all hover:scale-[1.02] cursor-pointer h-full">
                                     {/* 썸네일 */}
