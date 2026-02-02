@@ -2,8 +2,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { getCourseBySlug, getModulesByCourseId, getLessonsByModuleId } from '@/actions/courses'
-import { getCourseBySlug as getLocalCourse, Course as LocalCourse } from '@/data/courses'
+import { getCourseBySlug } from '@/actions/courses'
+import { getCourseBySlug as getLocalCourse } from '@/data/courses'
 
 // Phase 컬러 (로컬 데이터용)
 const PHASE_COLORS = [
@@ -32,22 +32,12 @@ function getAccessBadge(level: string) {
 export default async function CourseDetailPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params
 
-    // 1) Supabase에서 먼저 조회
+    // 1) Supabase에서 먼저 조회 (modules + lessons 포함)
     const dbCourse = await getCourseBySlug(slug)
 
     // 2) Supabase에 있으면 DB 데이터 사용
     if (dbCourse) {
-        const modules = await getModulesByCourseId(dbCourse.id)
-
-        // 각 모듈의 레슨 가져오기
-        const modulesWithLessons = await Promise.all(
-            modules.map(async (module) => {
-                const lessons = await getLessonsByModuleId(module.id)
-                return { ...module, lessons }
-            })
-        )
-
-        const allLessons = modulesWithLessons.flatMap(m => m.lessons)
+        const allLessons = dbCourse.modules?.flatMap(m => m.lessons) || []
         const firstLesson = allLessons[0]
 
         return (
@@ -100,7 +90,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                                         </svg>
-                                        <span>{modulesWithLessons.length}개 섹션</span>
+                                        <span>{dbCourse.modules?.length || 0}개 섹션</span>
                                     </div>
                                 </div>
                             </div>
@@ -138,7 +128,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                             </div>
 
                             <div className="space-y-4">
-                                {modulesWithLessons.map((module, moduleIndex) => (
+                                {dbCourse.modules?.map((module, moduleIndex) => (
                                     <div key={module.id} className="rounded-2xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 overflow-hidden">
                                         <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
                                             <div className="flex items-center gap-3">
@@ -147,10 +137,10 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                                                 </span>
                                                 <h3 className="font-semibold">{module.title}</h3>
                                             </div>
-                                            <span className="text-sm text-slate-500">{module.lessons.length}개 강의</span>
+                                            <span className="text-sm text-slate-500">{module.lessons?.length || 0}개 강의</span>
                                         </div>
                                         <div>
-                                            {module.lessons.map((lesson: any, lessonIndex: number) => (
+                                            {module.lessons?.map((lesson, lessonIndex) => (
                                                 <Link
                                                     key={lesson.id}
                                                     href={`/courses/${slug}/lesson/${lesson.id}`}
