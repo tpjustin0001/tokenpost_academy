@@ -56,31 +56,37 @@ export interface CourseWithStats extends Course {
 }
 
 export async function getCourses(): Promise<CourseWithStats[]> {
-    const supabase = await createServerClient()
+    try {
+        const supabase = await createServerClient()
 
-    const { data, error } = await supabase
-        .from('courses')
-        .select(`
-            *,
-            modules (
-                lessons (id)
-            )
-        `)
-        .order('created_at', { ascending: true })
+        const { data, error } = await supabase
+            .from('courses')
+            .select(`
+                *,
+                modules (
+                    lessons (id)
+                )
+            `)
+            .order('created_at', { ascending: true })
 
-    if (error) {
-        console.error('Error fetching courses:', error)
+        if (error) {
+            console.error('Error fetching courses:', error)
+            return []
+        }
+
+        if (!data) return []
+
+        // Map to include lessonsCount
+        return data.map((course: any) => ({
+            ...course,
+            lessonsCount: course.modules?.reduce((acc: number, m: any) => acc + (m.lessons?.length || 0), 0) || 0,
+            duration: '준비 중',
+            phase: 1
+        }))
+    } catch (err) {
+        console.error('Unexpected error in getCourses:', err)
         return []
     }
-
-    // Map to include lessonsCount
-    return data.map((course: any) => ({
-        ...course,
-        lessonsCount: course.modules?.reduce((acc: number, m: any) => acc + (m.lessons?.length || 0), 0) || 0,
-        // Default duration and phase if not present
-        duration: '준비 중',
-        phase: 1 // Default phase or logic to infer
-    }))
 }
 
 export async function getCourseBySlug(slug: string) {

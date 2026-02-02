@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { getCourses } from '@/actions/courses'
 
+
 // Phase 컬러
 const PHASE_COLORS = [
   { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400', dot: 'bg-emerald-500' },
@@ -17,6 +18,8 @@ const PHASE_COLORS = [
   { bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-400', dot: 'bg-red-500' },
   { bg: 'bg-slate-500/10', border: 'border-slate-500/20', text: 'text-slate-400', dot: 'bg-slate-500' },
 ]
+
+export const dynamic = 'force-dynamic'
 
 export default async function Home() {
   const courses = await getCourses()
