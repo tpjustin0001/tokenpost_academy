@@ -13,7 +13,15 @@ const ADMIN_EMAILS = [
     // TODO: 환경 변수로 이동
 ]
 
+// 개발 모드 플래그 - true로 설정하면 모든 인증 우회
+const DEV_MODE = true
+
 async function checkAdminAccess() {
+    // 개발 모드에서는 항상 접근 허용
+    if (DEV_MODE) {
+        return true
+    }
+
     const cookieStore = await cookies()
     const mockSession = cookieStore.get('mock-session')
     const mockAdmin = cookieStore.get('mock-admin')
@@ -63,8 +71,8 @@ export default async function AdminLayout({
                     <NavItem href="/admin/users" icon="👥">
                         사용자 관리
                     </NavItem>
-                    <NavItem href="/admin/enrollments" icon="📋">
-                        수강 현황
+                    <NavItem href="/admin/analytics" icon="📊">
+                        분석
                     </NavItem>
                     <NavItem href="/admin/settings" icon="⚙️">
                         설정

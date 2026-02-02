@@ -7,7 +7,8 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { exchangeToken, fetchUserInfo } from '@/lib/auth/oauth'
+import { exchangeToken } from '@/lib/auth/oauth'
+import { loginWithTokenPost } from '@/actions/auth'
 
 function CallbackContent() {
     const router = useRouter()
@@ -46,28 +47,29 @@ function CallbackContent() {
                 // 토큰 교환
                 const tokenResponse = await exchangeToken(code, codeVerifier)
 
-                // 사용자 정보 조회
-                const userInfo = await fetchUserInfo(tokenResponse.access_token)
+                // Server Action으로 로그인 처리 (세션 생성 및 DB 동기화)
+                const result = await loginWithTokenPost(tokenResponse.access_token)
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Server login failed')
+                }
 
                 // 세션 스토리지 정리
                 sessionStorage.removeItem('oauth_state')
                 sessionStorage.removeItem('oauth_code_verifier')
 
-                // 토큰 저장 (localStorage 또는 쿠키)
+                // 로컬 스토리지에 토큰 저장 (클라이언트 사이드 사용 용도)
                 localStorage.setItem('access_token', tokenResponse.access_token)
                 if (tokenResponse.refresh_token) {
                     localStorage.setItem('refresh_token', tokenResponse.refresh_token)
                 }
-                localStorage.setItem('user', JSON.stringify(userInfo))
-
-                // 개발용 mock-session 쿠키 설정
-                document.cookie = 'mock-session=true; path=/'
 
                 setStatus('success')
 
                 // 대시보드로 리다이렉트
                 setTimeout(() => {
                     router.push('/dashboard')
+                    // router.refresh() // 세션 쿠키 반영을 위해 리프레시 필요
                 }, 1000)
 
             } catch (error) {

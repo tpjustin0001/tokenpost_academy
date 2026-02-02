@@ -12,34 +12,40 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
+import { createCourse } from '@/actions/courses'
 
 export default function NewCoursePage() {
     const router = useRouter()
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [error, setError] = useState('')
     const [formData, setFormData] = useState({
         title: '',
         slug: '',
         description: '',
-        shortDescription: '',
-        level: 'beginner',
-        price: '',
-        isPublished: false,
-        thumbnailUrl: '',
+        accessLevel: 'plus' as 'free' | 'plus' | 'alpha',
     })
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsSubmitting(true)
+        setError('')
 
         try {
-            // TODO: Supabase에 저장
-            console.log('Creating course:', formData)
+            const result = await createCourse({
+                title: formData.title,
+                slug: formData.slug,
+                description: formData.description,
+                access_level: formData.accessLevel,
+            })
 
-            // 성공 시 목록으로 이동
-            router.push('/admin/courses')
-        } catch (error) {
-            console.error('Failed to create course:', error)
+            if (result.success) {
+                router.push('/admin/courses')
+            } else {
+                setError(result.error || '강의 생성에 실패했습니다')
+            }
+        } catch (err) {
+            console.error('Failed to create course:', err)
+            setError('강의 생성 중 오류가 발생했습니다')
         } finally {
             setIsSubmitting(false)
         }
@@ -66,6 +72,12 @@ export default function NewCoursePage() {
                 <p className="text-slate-400 mt-1">새로운 강의를 생성합니다.</p>
             </div>
 
+            {error && (
+                <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400">
+                    {error}
+                </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* 기본 정보 */}
                 <Card className="bg-slate-800/50 border-slate-700">
@@ -91,29 +103,18 @@ export default function NewCoursePage() {
 
                         {/* Slug */}
                         <div className="space-y-2">
-                            <Label htmlFor="slug" className="text-slate-300">URL 슬러그</Label>
+                            <Label htmlFor="slug" className="text-slate-300">URL 슬러그 *</Label>
                             <Input
                                 id="slug"
                                 value={formData.slug}
                                 onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
                                 placeholder="web3-fundamentals"
+                                required
                                 className="bg-slate-700 border-slate-600 text-white"
                             />
                             <p className="text-xs text-slate-500">
                                 URL: /courses/{formData.slug || 'slug'}
                             </p>
-                        </div>
-
-                        {/* 간단 설명 */}
-                        <div className="space-y-2">
-                            <Label htmlFor="shortDescription" className="text-slate-300">간단 설명</Label>
-                            <Input
-                                id="shortDescription"
-                                value={formData.shortDescription}
-                                onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
-                                placeholder="강의를 한 줄로 설명하세요"
-                                className="bg-slate-700 border-slate-600 text-white"
-                            />
                         </div>
 
                         {/* 상세 설명 */}
@@ -131,62 +132,30 @@ export default function NewCoursePage() {
                     </CardContent>
                 </Card>
 
-                {/* 가격 및 레벨 */}
+                {/* 접근 권한 */}
                 <Card className="bg-slate-800/50 border-slate-700">
                     <CardHeader>
-                        <CardTitle className="text-white">가격 및 레벨</CardTitle>
+                        <CardTitle className="text-white">접근 권한</CardTitle>
+                        <CardDescription className="text-slate-400">
+                            이 강의를 볼 수 있는 구독 등급을 선택하세요.
+                        </CardDescription>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* 가격 */}
+                    <CardContent>
                         <div className="space-y-2">
-                            <Label htmlFor="price" className="text-slate-300">가격 (원)</Label>
-                            <Input
-                                id="price"
-                                type="number"
-                                value={formData.price}
-                                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                placeholder="99000"
-                                className="bg-slate-700 border-slate-600 text-white"
-                            />
-                        </div>
-
-                        {/* 레벨 */}
-                        <div className="space-y-2">
-                            <Label className="text-slate-300">난이도</Label>
+                            <Label className="text-slate-300">구독 등급</Label>
                             <Select
-                                value={formData.level}
-                                onValueChange={(value) => setFormData({ ...formData, level: value })}
+                                value={formData.accessLevel}
+                                onValueChange={(value: 'free' | 'plus' | 'alpha') => setFormData({ ...formData, accessLevel: value })}
                             >
                                 <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="bg-slate-800 border-slate-700">
-                                    <SelectItem value="beginner">입문</SelectItem>
-                                    <SelectItem value="intermediate">중급</SelectItem>
-                                    <SelectItem value="advanced">고급</SelectItem>
+                                    <SelectItem value="free">🆓 무료 - 누구나 볼 수 있음</SelectItem>
+                                    <SelectItem value="plus">⭐ Plus - Plus 구독자 이상</SelectItem>
+                                    <SelectItem value="alpha">👑 Alpha - Alpha 구독자 전용</SelectItem>
                                 </SelectContent>
                             </Select>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* 게시 설정 */}
-                <Card className="bg-slate-800/50 border-slate-700">
-                    <CardHeader>
-                        <CardTitle className="text-white">게시 설정</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Label className="text-slate-300">게시 상태</Label>
-                                <p className="text-sm text-slate-500">
-                                    활성화하면 사용자에게 강의가 표시됩니다.
-                                </p>
-                            </div>
-                            <Switch
-                                checked={formData.isPublished}
-                                onCheckedChange={(checked) => setFormData({ ...formData, isPublished: checked })}
-                            />
                         </div>
                     </CardContent>
                 </Card>
@@ -202,7 +171,7 @@ export default function NewCoursePage() {
                     </Button>
                     <Button
                         type="submit"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || !formData.title || !formData.slug}
                         className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                     >
                         {isSubmitting ? '저장 중...' : '강의 생성'}

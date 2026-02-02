@@ -125,6 +125,7 @@ export async function fetchUserInfo(accessToken: string): Promise<{
     nickname: string
     uid: string
     grade?: string
+    point?: any // 상세 구조는 서버 응답에 따름
 }> {
     const response = await fetch(
         `${OAUTH_CONFIG.USER_INFO_URL}?scope=${OAUTH_CONFIG.USER_INFO_SCOPE}`,

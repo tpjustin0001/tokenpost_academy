@@ -4,7 +4,7 @@
  * 진도율 저장 Server Action
  */
 
-import { getCurrentUser } from '@/lib/auth/session'
+import { getSession } from '@/lib/auth/session'
 // import { createServerClient } from '@/lib/supabase/server'
 
 export interface ProgressData {
@@ -25,14 +25,14 @@ export interface ProgressResult {
 export async function saveProgress(data: ProgressData): Promise<ProgressResult> {
     try {
         // 1. 사용자 인증 확인
-        const user = await getCurrentUser()
+        const user = await getSession()
         if (!user) {
             return { success: false, error: 'Unauthorized' }
         }
 
         // 2. 진도율 저장 (TODO: Supabase 연동)
         console.log('[saveProgress]', {
-            userId: user.id,
+            userId: user.userId,
             lessonId: data.lessonId,
             currentTime: data.currentTime,
             duration: data.duration,
@@ -65,13 +65,13 @@ export async function saveProgress(data: ProgressData): Promise<ProgressResult> 
  */
 export async function markLessonComplete(lessonId: string): Promise<ProgressResult> {
     try {
-        const user = await getCurrentUser()
+        const user = await getSession()
         if (!user) {
             return { success: false, error: 'Unauthorized' }
         }
 
         console.log('[markLessonComplete]', {
-            userId: user.id,
+            userId: user.userId,
             lessonId,
         })
 
@@ -98,7 +98,7 @@ export async function markLessonComplete(lessonId: string): Promise<ProgressResu
  */
 export async function getCourseProgress(courseId: string) {
     try {
-        const user = await getCurrentUser()
+        const user = await getSession()
         if (!user) {
             return { success: false, error: 'Unauthorized', data: null }
         }

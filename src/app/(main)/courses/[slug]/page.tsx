@@ -50,7 +50,7 @@ export default function CourseDetailPage() {
             </div>
 
             {/* Header */}
-            <header className="fixed top-0 left-0 right-0 h-16 backdrop-blur-xl bg-slate-950/80 border-b border-white/5 z-50">
+            <header className="sticky top-0 left-0 right-0 h-16 backdrop-blur-xl bg-slate-950/80 border-b border-white/5 z-30">
                 <div className="h-full max-w-6xl mx-auto px-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <button
@@ -68,16 +68,12 @@ export default function CourseDetailPage() {
                             <span className="font-semibold hidden sm:block">Academy</span>
                         </Link>
                     </div>
-                    <Link href="/login">
-                        <Button variant="outline" size="sm" className="border-white/10 text-slate-400 hover:text-white hover:bg-white/5">
-                            로그인
-                        </Button>
-                    </Link>
+                    {/* 로그인 버튼 제거 (사이드바에 있음) */}
                 </div>
             </header>
 
             {/* Content */}
-            <main className="relative pt-24 pb-16 px-4">
+            <main className="relative py-8 px-4">
                 <div className="max-w-6xl mx-auto">
                     {/* Hero Section */}
                     <div className="grid lg:grid-cols-3 gap-8 mb-12">

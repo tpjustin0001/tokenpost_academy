@@ -8,7 +8,7 @@
 
 import { generateSignedToken, getStreamUrl } from '@/lib/cloudflare/stream'
 import { verifyEnrollment } from './enrollment'
-import { getCurrentUser } from '@/lib/auth/session'
+import { getSession } from '@/lib/auth/session'
 
 interface VideoTokenResult {
     success: boolean
@@ -31,13 +31,13 @@ interface VideoTokenResult {
 export async function getVideoToken(lessonId: string): Promise<VideoTokenResult> {
     try {
         // 1. 사용자 인증 확인
-        const user = await getCurrentUser()
+        const user = await getSession()
         if (!user) {
             return { success: false, error: 'Unauthorized: Please login first' }
         }
 
         // 2. 수강 권한 확인
-        const enrollment = await verifyEnrollment(user.id, lessonId)
+        const enrollment = await verifyEnrollment(user.userId, lessonId)
         if (!enrollment.hasAccess) {
             return { success: false, error: 'Forbidden: No enrollment for this course' }
         }

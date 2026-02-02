@@ -2,10 +2,10 @@
 
 /**
  * 레슨 관리 페이지
- * 특정 강의의 레슨 목록 및 순서 관리
+ * 특정 강의의 모듈/레슨 목록 및 순서 관리
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -13,69 +13,169 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { VideoUpload } from '@/components/admin/VideoUpload'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog'
+import {
+    getCourseById,
+    createModule,
+    updateModule,
+    deleteModule,
+    createLesson,
+    updateLesson,
+    deleteLesson,
+    type ModuleWithLessons,
+    type Lesson
+} from '@/actions/courses'
 
-interface Lesson {
-    id: string
-    title: string
-    duration: string
-    videoUid: string | null
-    order: number
-    isPublished: boolean
+// 접근 권한 뱃지
+function getAccessBadge(level: string) {
+    switch (level) {
+        case 'free':
+            return <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs">🆓 무료</Badge>
+        case 'plus':
+            return <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs">⭐ Plus</Badge>
+        case 'alpha':
+            return <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/30 text-xs">👑 Alpha</Badge>
+        default:
+            return null
+    }
 }
-
-interface Module {
-    id: string
-    title: string
-    order: number
-    lessons: Lesson[]
-}
-
-// TODO: Supabase에서 실제 데이터 조회
-const MOCK_MODULES: Module[] = [
-    {
-        id: 'module-1',
-        title: '블록체인 기초',
-        order: 1,
-        lessons: [
-            { id: 'lesson-1', title: '블록체인이란 무엇인가?', duration: '15:30', videoUid: 'abc123', order: 1, isPublished: true },
-            { id: 'lesson-2', title: '탈중앙화의 의미', duration: '12:45', videoUid: 'def456', order: 2, isPublished: true },
-            { id: 'lesson-3', title: '합의 알고리즘 이해하기', duration: '18:20', videoUid: null, order: 3, isPublished: false },
-        ],
-    },
-    {
-        id: 'module-2',
-        title: '스마트 컨트랙트',
-        order: 2,
-        lessons: [
-            { id: 'lesson-4', title: '스마트 컨트랙트 개념', duration: '14:00', videoUid: 'ghi789', order: 1, isPublished: true },
-        ],
-    },
-]
 
 export default function LessonsManagePage() {
     const params = useParams()
     const router = useRouter()
     const courseId = params.courseId as string
 
-    const [modules, setModules] = useState(MOCK_MODULES)
+    const [course, setCourse] = useState<{ title: string; modules: ModuleWithLessons[] } | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [saving, setSaving] = useState(false)
+
+    // Module 관련 상태
+    const [newModuleTitle, setNewModuleTitle] = useState('')
+    const [editingModuleId, setEditingModuleId] = useState<string | null>(null)
+    const [moduleNameInput, setModuleNameInput] = useState('')
+
+    // Lesson 관련 상태
     const [newLessonTitle, setNewLessonTitle] = useState('')
-    const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
+    const [editingLessonId, setEditingLessonId] = useState<string | null>(null)
+    const [vimeoIdInput, setVimeoIdInput] = useState('')
+    const [lessonAccessLevel, setLessonAccessLevel] = useState<'free' | 'plus' | 'alpha'>('plus')
 
-    const handleAddLesson = (moduleId: string) => {
-        if (!newLessonTitle.trim()) return
+    // 데이터 로드
+    useEffect(() => {
+        loadCourse()
+    }, [courseId])
 
-        // TODO: Supabase에 저장
-        console.log('Adding lesson:', { moduleId, title: newLessonTitle })
-
-        setNewLessonTitle('')
-        setSelectedModuleId(null)
+    const loadCourse = async () => {
+        setLoading(true)
+        const data = await getCourseById(courseId)
+        if (data) {
+            setCourse({ title: data.title, modules: data.modules || [] })
+        }
+        setLoading(false)
     }
 
-    const handleVideoUploadComplete = (lessonId: string, videoUid: string) => {
-        // TODO: Supabase에 videoUid 업데이트
-        console.log('Video uploaded for lesson:', { lessonId, videoUid })
+    // === 모듈 CRUD ===
+    const handleAddModule = async () => {
+        if (!newModuleTitle.trim()) return
+        setSaving(true)
+
+        const result = await createModule(courseId, newModuleTitle)
+        if (result.success) {
+            await loadCourse()
+            setNewModuleTitle('')
+        }
+        setSaving(false)
+    }
+
+    const handleSaveModuleName = async (moduleId: string) => {
+        if (!moduleNameInput.trim()) return
+        setSaving(true)
+
+        await updateModule(moduleId, moduleNameInput)
+        await loadCourse()
+        setEditingModuleId(null)
+        setModuleNameInput('')
+        setSaving(false)
+    }
+
+    const handleDeleteModule = async (moduleId: string) => {
+        if (!confirm('이 모듈과 모든 레슨이 삭제됩니다. 계속하시겠습니까?')) return
+        setSaving(true)
+
+        await deleteModule(moduleId)
+        await loadCourse()
+        setSaving(false)
+    }
+
+    // === 레슨 CRUD ===
+    const handleAddLesson = async (moduleId: string) => {
+        if (!newLessonTitle.trim()) return
+        setSaving(true)
+
+        await createLesson(moduleId, {
+            title: newLessonTitle,
+            access_level: 'plus'
+        })
+        await loadCourse()
+        setNewLessonTitle('')
+        setSaving(false)
+    }
+
+    const extractVimeoId = (input: string): string => {
+        if (!input) return ''
+        const match = input.match(/(?:vimeo\.com\/|video\/)?(\d+)/)
+        return match ? match[1] : input.trim()
+    }
+
+    const handleSaveLesson = async (lessonId: string) => {
+        setSaving(true)
+        const vimeoId = extractVimeoId(vimeoIdInput)
+
+        await updateLesson(lessonId, {
+            vimeo_id: vimeoId || null,
+            access_level: lessonAccessLevel
+        })
+        await loadCourse()
+        setEditingLessonId(null)
+        setVimeoIdInput('')
+        setSaving(false)
+    }
+
+    const handleDeleteLesson = async (lessonId: string) => {
+        if (!confirm('이 레슨을 삭제하시겠습니까?')) return
+        setSaving(true)
+
+        await deleteLesson(lessonId)
+        await loadCourse()
+        setSaving(false)
+    }
+
+    const openLessonDialog = (lesson: Lesson) => {
+        setEditingLessonId(lesson.id)
+        setVimeoIdInput(lesson.vimeo_id || '')
+        setLessonAccessLevel(lesson.access_level)
+    }
+
+    if (loading) {
+        return (
+            <div className="p-6 flex items-center justify-center min-h-[400px]">
+                <div className="text-slate-400">로딩 중...</div>
+            </div>
+        )
+    }
+
+    if (!course) {
+        return (
+            <div className="p-6">
+                <div className="text-center py-12">
+                    <p className="text-slate-400 mb-4">강의를 찾을 수 없습니다</p>
+                    <Link href="/admin/courses">
+                        <Button variant="outline">강의 목록으로</Button>
+                    </Link>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -86,119 +186,259 @@ export default function LessonsManagePage() {
                     <div className="flex items-center gap-2 text-sm text-slate-400 mb-2">
                         <Link href="/admin/courses" className="hover:text-white">강의 관리</Link>
                         <span>/</span>
-                        <span>레슨 관리</span>
+                        <span>커리큘럼</span>
                     </div>
-                    <h1 className="text-3xl font-bold text-white">레슨 관리</h1>
-                    <p className="text-slate-400 mt-1">강의의 모듈과 레슨을 관리합니다.</p>
+                    <h1 className="text-2xl font-bold text-white">{course.title}</h1>
+                    <p className="text-slate-400 mt-1">모듈과 레슨을 관리합니다</p>
                 </div>
-                <Button
-                    onClick={() => {/* TODO: 모듈 추가 */ }}
-                    variant="outline"
-                >
-                    + 새 모듈
-                </Button>
             </div>
+
+            {/* 새 모듈 추가 */}
+            <Card className="bg-slate-800/50 border-slate-700">
+                <CardContent className="pt-6">
+                    <div className="flex gap-4">
+                        <Input
+                            value={newModuleTitle}
+                            onChange={(e) => setNewModuleTitle(e.target.value)}
+                            placeholder="새 모듈 제목 (예: 블록체인 기초)"
+                            className="bg-slate-700 border-slate-600 text-white flex-1"
+                        />
+                        <Button
+                            onClick={handleAddModule}
+                            disabled={saving || !newModuleTitle.trim()}
+                            className="bg-gradient-to-r from-blue-600 to-purple-600"
+                        >
+                            + 모듈 추가
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* 모듈 목록 */}
-            <div className="space-y-6">
-                {modules.map((module) => (
-                    <Card key={module.id} className="bg-slate-800/50 border-slate-700">
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <span className="text-slate-500 cursor-move">⣿</span>
-                                <CardTitle className="text-white">{module.title}</CardTitle>
-                                <Badge variant="outline" className="text-slate-400">
-                                    {module.lessons.length}개 레슨
-                                </Badge>
-                            </div>
-                            <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button size="sm" variant="outline" onClick={() => setSelectedModuleId(module.id)}>
-                                        + 레슨 추가
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="bg-slate-800 border-slate-700">
-                                    <DialogHeader>
-                                        <DialogTitle className="text-white">새 레슨 추가</DialogTitle>
-                                    </DialogHeader>
-                                    <div className="space-y-4 pt-4">
-                                        <div className="space-y-2">
-                                            <Label className="text-slate-300">레슨 제목</Label>
-                                            <Input
-                                                value={newLessonTitle}
-                                                onChange={(e) => setNewLessonTitle(e.target.value)}
-                                                placeholder="레슨 제목을 입력하세요"
-                                                className="bg-slate-700 border-slate-600 text-white"
-                                            />
-                                        </div>
-                                        <Button
-                                            onClick={() => handleAddLesson(module.id)}
-                                            className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
-                                        >
-                                            레슨 추가
-                                        </Button>
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                {module.lessons.map((lesson) => (
-                                    <div
-                                        key={lesson.id}
-                                        className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg hover:bg-slate-700/50 transition"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-slate-500 cursor-move">⣿</span>
-                                            <div>
-                                                <p className="text-white font-medium">{lesson.title}</p>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className="text-sm text-slate-500">{lesson.duration}</span>
-                                                    {lesson.videoUid ? (
-                                                        <Badge className="bg-green-500/20 text-green-400 text-xs">영상 있음</Badge>
-                                                    ) : (
-                                                        <Badge className="bg-yellow-500/20 text-yellow-400 text-xs">영상 없음</Badge>
-                                                    )}
-                                                    {!lesson.isPublished && (
-                                                        <Badge className="bg-slate-500/20 text-slate-400 text-xs">비공개</Badge>
-                                                    )}
+            {course.modules.length === 0 ? (
+                <Card className="bg-slate-800/50 border-slate-700">
+                    <CardContent className="py-12 text-center">
+                        <p className="text-slate-400">
+                            아직 모듈이 없습니다. 위에서 첫 번째 모듈을 추가하세요.
+                        </p>
+                    </CardContent>
+                </Card>
+            ) : (
+                <div className="space-y-6">
+                    {course.modules.map((module) => (
+                        <Card key={module.id} className="bg-slate-800/50 border-slate-700">
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-slate-500 cursor-move">⣿</span>
+                                    <CardTitle className="text-white">{module.title}</CardTitle>
+
+                                    {/* 모듈 이름 수정 다이얼로그 */}
+                                    <Dialog open={editingModuleId === module.id} onOpenChange={(open) => !open && setEditingModuleId(null)}>
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="text-slate-400 hover:text-white h-6 w-6 p-0"
+                                                onClick={() => {
+                                                    setEditingModuleId(module.id)
+                                                    setModuleNameInput(module.title)
+                                                }}
+                                            >
+                                                ✏️
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="bg-slate-800 border-slate-700">
+                                            <DialogHeader>
+                                                <DialogTitle className="text-white">모듈 이름 수정</DialogTitle>
+                                            </DialogHeader>
+                                            <div className="space-y-4 pt-4">
+                                                <Input
+                                                    value={moduleNameInput}
+                                                    onChange={(e) => setModuleNameInput(e.target.value)}
+                                                    className="bg-slate-700 border-slate-600 text-white"
+                                                />
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        onClick={() => handleSaveModuleName(module.id)}
+                                                        disabled={saving}
+                                                        className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600"
+                                                    >
+                                                        저장
+                                                    </Button>
+                                                    <DialogClose asChild>
+                                                        <Button variant="outline" className="flex-1">취소</Button>
+                                                    </DialogClose>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Dialog>
-                                                <DialogTrigger asChild>
-                                                    <Button size="sm" variant="outline">
-                                                        영상 업로드
-                                                    </Button>
-                                                </DialogTrigger>
-                                                <DialogContent className="bg-slate-800 border-slate-700 max-w-xl">
-                                                    <DialogHeader>
-                                                        <DialogTitle className="text-white">영상 업로드</DialogTitle>
-                                                    </DialogHeader>
-                                                    <VideoUpload
-                                                        onUploadComplete={(videoUid) => handleVideoUploadComplete(lesson.id, videoUid)}
-                                                        onError={(error) => console.error(error)}
-                                                    />
-                                                </DialogContent>
-                                            </Dialog>
-                                            <Button size="sm" variant="ghost">
-                                                수정
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
+                                        </DialogContent>
+                                    </Dialog>
 
-                                {module.lessons.length === 0 && (
-                                    <p className="text-center py-8 text-slate-500">
-                                        레슨이 없습니다. 첫 번째 레슨을 추가하세요.
-                                    </p>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
+                                    <Badge variant="outline" className="text-slate-400">
+                                        {module.lessons?.length || 0}개 레슨
+                                    </Badge>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    {/* 새 레슨 추가 다이얼로그 */}
+                                    <Dialog>
+                                        <DialogTrigger asChild>
+                                            <Button size="sm" variant="outline">+ 레슨 추가</Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="bg-slate-800 border-slate-700">
+                                            <DialogHeader>
+                                                <DialogTitle className="text-white">새 레슨 추가</DialogTitle>
+                                            </DialogHeader>
+                                            <div className="space-y-4 pt-4">
+                                                <div className="space-y-2">
+                                                    <Label className="text-slate-300">레슨 제목</Label>
+                                                    <Input
+                                                        value={newLessonTitle}
+                                                        onChange={(e) => setNewLessonTitle(e.target.value)}
+                                                        placeholder="레슨 제목을 입력하세요"
+                                                        className="bg-slate-700 border-slate-600 text-white"
+                                                    />
+                                                </div>
+                                                <Button
+                                                    onClick={() => handleAddLesson(module.id)}
+                                                    disabled={saving || !newLessonTitle.trim()}
+                                                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
+                                                >
+                                                    레슨 추가
+                                                </Button>
+                                            </div>
+                                        </DialogContent>
+                                    </Dialog>
+
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="text-red-400 hover:text-red-300"
+                                        onClick={() => handleDeleteModule(module.id)}
+                                    >
+                                        🗑️
+                                    </Button>
+                                </div>
+                            </CardHeader>
+
+                            <CardContent>
+                                <div className="space-y-2">
+                                    {(!module.lessons || module.lessons.length === 0) ? (
+                                        <p className="text-slate-500 text-center py-4">레슨이 없습니다</p>
+                                    ) : (
+                                        module.lessons.map((lesson) => (
+                                            <div
+                                                key={lesson.id}
+                                                className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg hover:bg-slate-700/50 transition"
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <span className="text-slate-500 cursor-move">⣿</span>
+                                                    <div>
+                                                        <p className="text-white font-medium">{lesson.title}</p>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            {lesson.duration && (
+                                                                <span className="text-sm text-slate-500">{lesson.duration}</span>
+                                                            )}
+                                                            {getAccessBadge(lesson.access_level)}
+                                                            {lesson.vimeo_id ? (
+                                                                <Badge className="bg-green-500/20 text-green-400 text-xs">Vimeo 연결됨</Badge>
+                                                            ) : (
+                                                                <Badge className="bg-yellow-500/20 text-yellow-400 text-xs">영상 없음</Badge>
+                                                            )}
+                                                            {!lesson.is_published && (
+                                                                <Badge className="bg-slate-500/20 text-slate-400 text-xs">비공개</Badge>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    {/* 레슨 편집 다이얼로그 */}
+                                                    <Dialog open={editingLessonId === lesson.id} onOpenChange={(open) => !open && setEditingLessonId(null)}>
+                                                        <DialogTrigger asChild>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => openLessonDialog(lesson)}
+                                                            >
+                                                                {lesson.vimeo_id ? '수정' : 'Vimeo 연결'}
+                                                            </Button>
+                                                        </DialogTrigger>
+                                                        <DialogContent className="bg-slate-800 border-slate-700 max-w-md">
+                                                            <DialogHeader>
+                                                                <DialogTitle className="text-white">레슨 편집</DialogTitle>
+                                                            </DialogHeader>
+                                                            <div className="space-y-4 pt-4">
+                                                                <div className="space-y-2">
+                                                                    <Label className="text-slate-300">Vimeo URL 또는 ID</Label>
+                                                                    <Input
+                                                                        value={vimeoIdInput}
+                                                                        onChange={(e) => setVimeoIdInput(e.target.value)}
+                                                                        placeholder="https://vimeo.com/123456789"
+                                                                        className="bg-slate-700 border-slate-600 text-white"
+                                                                    />
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Label className="text-slate-300">접근 권한</Label>
+                                                                    <Select
+                                                                        value={lessonAccessLevel}
+                                                                        onValueChange={(v: 'free' | 'plus' | 'alpha') => setLessonAccessLevel(v)}
+                                                                    >
+                                                                        <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                                                                            <SelectValue />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent className="bg-slate-800 border-slate-700">
+                                                                            <SelectItem value="free">🆓 무료</SelectItem>
+                                                                            <SelectItem value="plus">⭐ Plus</SelectItem>
+                                                                            <SelectItem value="alpha">👑 Alpha</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </div>
+
+                                                                {/* Vimeo 미리보기 */}
+                                                                {vimeoIdInput && extractVimeoId(vimeoIdInput) && (
+                                                                    <div className="aspect-video rounded overflow-hidden bg-black">
+                                                                        <iframe
+                                                                            src={`https://player.vimeo.com/video/${extractVimeoId(vimeoIdInput)}`}
+                                                                            className="w-full h-full"
+                                                                            allow="autoplay; fullscreen"
+                                                                        />
+                                                                    </div>
+                                                                )}
+
+                                                                <div className="flex gap-2">
+                                                                    <Button
+                                                                        onClick={() => handleSaveLesson(lesson.id)}
+                                                                        disabled={saving}
+                                                                        className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600"
+                                                                    >
+                                                                        저장
+                                                                    </Button>
+                                                                    <DialogClose asChild>
+                                                                        <Button variant="outline" className="flex-1">취소</Button>
+                                                                    </DialogClose>
+                                                                </div>
+                                                            </div>
+                                                        </DialogContent>
+                                                    </Dialog>
+
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="text-red-400 hover:text-red-300"
+                                                        onClick={() => handleDeleteLesson(lesson.id)}
+                                                    >
+                                                        🗑️
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            )}
         </div>
     )
 }

@@ -10,6 +10,8 @@ export interface Lesson {
     duration: string
     isFreePreview?: boolean
     isCompleted?: boolean
+    /** Vimeo 비디오 ID (Admin에서 관리) */
+    vimeoId?: string
 }
 
 export interface Section {
@@ -51,8 +53,8 @@ export const PHASE_1: Course = {
             id: '1-1',
             title: 'Welcome & Setup',
             lessons: [
-                { id: '1-1-1', title: '강의 소개 및 방향성', titleEn: 'Course Intro', duration: '3:07', isFreePreview: true },
-                { id: '1-1-2', title: '수강생 혜택 및 자료 활용법', titleEn: 'Member Resources & Discounts', duration: '5:00' },
+                { id: '1-1-1', title: '강의 소개 및 방향성', titleEn: 'Course Intro', duration: '3:07', isFreePreview: true, vimeoId: '76979871' },
+                { id: '1-1-2', title: '수강생 혜택 및 자료 활용법', titleEn: 'Member Resources & Discounts', duration: '5:00', vimeoId: '76979871' },
                 { id: '1-1-3', title: '커뮤니티 참여 방법', titleEn: 'How to Join TokenPost Community', duration: '4:30' },
             ],
         },

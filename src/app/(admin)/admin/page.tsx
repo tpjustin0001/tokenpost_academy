@@ -4,21 +4,32 @@
  */
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { createServerClient } from '@/lib/supabase/server'
 
-// TODO: Supabase에서 실제 데이터 조회
-const MOCK_STATS = {
-    totalUsers: 1234,
-    totalCourses: 12,
-    totalEnrollments: 3456,
-    revenue: 15680000,
-    recentEnrollments: [
-        { id: 1, user: '김철수', course: '웹3 핵심 개념', date: '2024-01-30' },
-        { id: 2, user: '이영희', course: 'DeFi 마스터클래스', date: '2024-01-30' },
-        { id: 3, user: '박민수', course: 'NFT 개발 가이드', date: '2024-01-29' },
-    ],
+async function getDashboardStats() {
+    const supabase = await createServerClient()
+
+    // 통계 쿼리 병렬 실행
+    const [
+        { count: totalUsers },
+        { count: totalCourses },
+        { data: recentUsers }
+    ] = await Promise.all([
+        supabase.from('users').select('*', { count: 'exact', head: true }),
+        supabase.from('courses').select('*', { count: 'exact', head: true }),
+        supabase.from('users').select('nickname, email, created_at').order('created_at', { ascending: false }).limit(5)
+    ])
+
+    return {
+        totalUsers: totalUsers || 0,
+        totalCourses: totalCourses || 0,
+        recentUsers: recentUsers || []
+    }
 }
 
-export default function AdminDashboard() {
+export default async function AdminDashboard() {
+    const stats = await getDashboardStats()
+
     return (
         <div className="p-6 space-y-6">
             {/* 페이지 헤더 */}
@@ -31,57 +42,62 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     title="총 회원수"
-                    value={MOCK_STATS.totalUsers.toLocaleString()}
+                    value={stats.totalUsers.toLocaleString()}
                     icon="👥"
-                    change="+12%"
-                    changeType="positive"
                 />
                 <StatCard
                     title="강의 수"
-                    value={MOCK_STATS.totalCourses.toString()}
+                    value={stats.totalCourses.toString()}
                     icon="📚"
-                    change="+2"
-                    changeType="positive"
                 />
                 <StatCard
-                    title="총 수강"
-                    value={MOCK_STATS.totalEnrollments.toLocaleString()}
-                    icon="📋"
-                    change="+156"
-                    changeType="positive"
+                    title="모듈 수"
+                    value="-"
+                    icon="📑"
                 />
                 <StatCard
-                    title="총 매출"
-                    value={`₩${(MOCK_STATS.revenue / 10000).toLocaleString()}만`}
-                    icon="💰"
-                    change="+8.5%"
-                    changeType="positive"
+                    title="레슨 수"
+                    value="-"
+                    icon="🎬"
                 />
             </div>
 
-            {/* 최근 수강 신청 */}
+            {/* 최근 가입 회원 */}
             <Card className="bg-slate-800/50 border-slate-700">
                 <CardHeader>
-                    <CardTitle className="text-white">최근 수강 신청</CardTitle>
+                    <CardTitle className="text-white">최근 가입 회원</CardTitle>
                     <CardDescription className="text-slate-400">
-                        최근 등록된 수강 내역
+                        최근 가입한 사용자 목록
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
-                        {MOCK_STATS.recentEnrollments.map((enrollment) => (
-                            <div
-                                key={enrollment.id}
-                                className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg"
-                            >
-                                <div>
-                                    <p className="text-white font-medium">{enrollment.user}</p>
-                                    <p className="text-sm text-slate-400">{enrollment.course}</p>
+                    {stats.recentUsers.length === 0 ? (
+                        <div className="py-8 text-center text-slate-400">
+                            아직 가입한 회원이 없습니다
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {stats.recentUsers.map((user: any, index: number) => (
+                                <div
+                                    key={index}
+                                    className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center text-white font-medium">
+                                            {(user.nickname || user.email)?.[0]?.toUpperCase() || '?'}
+                                        </div>
+                                        <div>
+                                            <p className="text-white font-medium">{user.nickname || '이름 없음'}</p>
+                                            <p className="text-sm text-slate-400">{user.email}</p>
+                                        </div>
+                                    </div>
+                                    <span className="text-sm text-slate-500">
+                                        {new Date(user.created_at).toLocaleDateString('ko-KR')}
+                                    </span>
                                 </div>
-                                <span className="text-sm text-slate-500">{enrollment.date}</span>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>
@@ -92,26 +108,16 @@ function StatCard({
     title,
     value,
     icon,
-    change,
-    changeType,
 }: {
     title: string
     value: string
     icon: string
-    change: string
-    changeType: 'positive' | 'negative'
 }) {
     return (
         <Card className="bg-slate-800/50 border-slate-700">
             <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                     <span className="text-2xl">{icon}</span>
-                    <span
-                        className={`text-sm ${changeType === 'positive' ? 'text-green-400' : 'text-red-400'
-                            }`}
-                    >
-                        {change}
-                    </span>
                 </div>
                 <div className="mt-4">
                     <p className="text-3xl font-bold text-white">{value}</p>

@@ -1,88 +1,72 @@
-/**
- * 🔐 Session Management
- * 사용자 세션 검증 및 관리
- */
-
+import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
-// import { createServerClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 
-export interface User {
-    id: string
+const SECRET_KEY = process.env.SESSION_SECRET || 'your-secret-key-at-least-32-chars-long'
+const key = new TextEncoder().encode(SECRET_KEY)
+
+export type SessionPayload = {
+    userId: string
     email: string
-    nickname?: string
-    profileImage?: string
-    role: 'student' | 'admin'
+    role?: string
+    name?: string
+    expiresAt: Date
 }
 
-/**
- * 현재 로그인한 사용자 정보 조회
- * Server Components, Server Actions에서 사용
- */
-export async function getCurrentUser(): Promise<User | null> {
-    // TODO: Supabase Auth 연동 후 구현
-    //
-    // const supabase = createServerClient()
-    // const { data: { user } } = await supabase.auth.getUser()
-    //
-    // if (!user) return null
-    //
-    // // public.users 테이블에서 추가 정보 조회
-    // const { data: profile } = await supabase
-    //   .from('users')
-    //   .select('*')
-    //   .eq('id', user.id)
-    //   .single()
-    //
-    // return {
-    //   id: user.id,
-    //   email: user.email!,
-    //   nickname: profile?.nickname,
-    //   profileImage: profile?.profile_image,
-    //   role: profile?.role || 'student',
-    // }
+export async function encrypt(payload: SessionPayload) {
+    return new SignJWT(payload)
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('7d')
+        .sign(key)
+}
 
-    // 임시 Mock 데이터 (개발용)
+export async function decrypt(session: string | undefined = '') {
+    try {
+        const { payload } = await jwtVerify(session, key, {
+            algorithms: ['HS256'],
+        })
+        return payload as unknown as SessionPayload
+    } catch (error) {
+        console.error('Failed to verify session:', error)
+        return null
+    }
+}
+
+export async function createSession(userId: string, email: string, name?: string, role: string = 'user') {
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    const session = await encrypt({ userId, email, role, name, expiresAt })
+
+    // Cookie Store는 Server Action이나 Route Handler에서만 사용 가능
     const cookieStore = await cookies()
-    const mockSession = cookieStore.get('mock-session')
-
-    if (mockSession) {
-        return {
-            id: 'mock-user-id',
-            email: 'test@tokenpost.kr',
-            nickname: '테스트 유저',
-            role: 'student',
-        }
-    }
-
-    return null
+    cookieStore.set('session', session, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        expires: expiresAt,
+        sameSite: 'lax',
+        path: '/',
+    })
 }
 
-/**
- * 세션 검증 (Middleware에서 사용)
- * @param request - Next.js Request 객체
- */
-export async function verifySession(request: Request): Promise<User | null> {
-    // TODO: Supabase Auth 세션 검증
-    // 이 함수는 middleware.ts에서 호출됩니다.
-
-    // 개발 중 임시 구현
-    const cookieHeader = request.headers.get('cookie')
-    if (cookieHeader?.includes('mock-session')) {
-        return {
-            id: 'mock-user-id',
-            email: 'test@tokenpost.kr',
-            nickname: '테스트 유저',
-            role: 'student',
-        }
-    }
-
-    return null
+export async function deleteSession() {
+    const cookieStore = await cookies()
+    cookieStore.delete('session')
 }
 
-/**
- * 사용자가 관리자인지 확인
- */
-export async function isAdmin(): Promise<boolean> {
-    const user = await getCurrentUser()
-    return user?.role === 'admin'
+export async function verifySession() {
+    const cookieStore = await cookies()
+    const cookie = cookieStore.get('session')?.value
+    const session = await decrypt(cookie)
+
+    if (!session?.userId) {
+        return null
+    }
+
+    return { isAuth: true, userId: session.userId, user: session }
+}
+
+export async function getSession() {
+    const session = await verifySession()
+    if (!session) return null
+    return session.user
 }

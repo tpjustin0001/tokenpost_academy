@@ -21,40 +21,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-
-// TODO: Supabase에서 실제 데이터 조회
-const MOCK_COURSES = [
-    {
-        id: 'web3-fundamentals',
-        title: '웹3 핵심 개념 완벽 정리',
-        status: 'published',
-        instructor: '김토큰',
-        enrollments: 1234,
-        lessons: 24,
-        price: 99000,
-        createdAt: '2024-01-15',
-    },
-    {
-        id: 'defi-masterclass',
-        title: 'DeFi 마스터클래스',
-        status: 'published',
-        instructor: '이디파이',
-        enrollments: 856,
-        lessons: 36,
-        price: 149000,
-        createdAt: '2024-01-10',
-    },
-    {
-        id: 'nft-development',
-        title: 'NFT 개발 실전 가이드',
-        status: 'draft',
-        instructor: '박엔프티',
-        enrollments: 0,
-        lessons: 12,
-        price: 129000,
-        createdAt: '2024-01-28',
-    },
-]
+import { getCourses } from '@/actions/courses'
 
 function getStatusBadge(status: string) {
     switch (status) {
@@ -69,90 +36,158 @@ function getStatusBadge(status: string) {
     }
 }
 
-export default function AdminCoursesPage() {
+function getAccessBadge(accessLevel: string) {
+    switch (accessLevel) {
+        case 'free':
+            return <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">🆓 무료</Badge>
+        case 'plus':
+            return <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30">⭐ Plus</Badge>
+        case 'alpha':
+            return <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/30">👑 Alpha</Badge>
+        default:
+            return <Badge className="bg-slate-500/20 text-slate-400">구독</Badge>
+    }
+}
+
+export default async function AdminCoursesPage() {
+    const courses = await getCourses()
+
     return (
         <div className="p-6 space-y-6">
             {/* 페이지 헤더 */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-white">강의 관리</h1>
-                    <p className="text-slate-400 mt-1">모든 강의를 관리합니다.</p>
+                    <h1 className="text-2xl font-bold text-white">강의 관리</h1>
+                    <p className="text-slate-400 mt-1">강의를 생성하고 관리합니다</p>
                 </div>
                 <Link href="/admin/courses/new">
-                    <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                        + 새 강의
+                    <Button className="bg-gradient-to-r from-blue-600 to-purple-600">
+                        + 새 강의 만들기
                     </Button>
                 </Link>
             </div>
 
-            {/* 강의 테이블 */}
+            {/* 통계 카드 */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card className="bg-slate-800/50 border-slate-700">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm text-slate-400">전체 강의</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-3xl font-bold text-white">{courses.length}</p>
+                    </CardContent>
+                </Card>
+                <Card className="bg-slate-800/50 border-slate-700">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm text-slate-400">게시됨</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-3xl font-bold text-green-400">
+                            {courses.filter(c => c.status === 'published').length}
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card className="bg-slate-800/50 border-slate-700">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm text-slate-400">초안</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-3xl font-bold text-yellow-400">
+                            {courses.filter(c => c.status === 'draft').length}
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card className="bg-slate-800/50 border-slate-700">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm text-slate-400">무료 강의</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-3xl font-bold text-emerald-400">
+                            {courses.filter(c => c.access_level === 'free').length}
+                        </p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* 강의 목록 테이블 */}
             <Card className="bg-slate-800/50 border-slate-700">
                 <CardHeader>
                     <CardTitle className="text-white">전체 강의</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="border-slate-700">
-                                <TableHead className="text-slate-400">강의명</TableHead>
-                                <TableHead className="text-slate-400">상태</TableHead>
-                                <TableHead className="text-slate-400">강사</TableHead>
-                                <TableHead className="text-slate-400 text-right">수강생</TableHead>
-                                <TableHead className="text-slate-400 text-right">레슨</TableHead>
-                                <TableHead className="text-slate-400 text-right">가격</TableHead>
-                                <TableHead className="text-slate-400 w-12"></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {MOCK_COURSES.map((course) => (
-                                <TableRow key={course.id} className="border-slate-700">
-                                    <TableCell>
-                                        <Link
-                                            href={`/admin/courses/${course.id}`}
-                                            className="text-white hover:text-blue-400 transition font-medium"
-                                        >
-                                            {course.title}
-                                        </Link>
-                                    </TableCell>
-                                    <TableCell>{getStatusBadge(course.status)}</TableCell>
-                                    <TableCell className="text-slate-300">{course.instructor}</TableCell>
-                                    <TableCell className="text-right text-slate-300">
-                                        {course.enrollments.toLocaleString()}
-                                    </TableCell>
-                                    <TableCell className="text-right text-slate-300">
-                                        {course.lessons}
-                                    </TableCell>
-                                    <TableCell className="text-right text-slate-300">
-                                        ₩{course.price.toLocaleString()}
-                                    </TableCell>
-                                    <TableCell>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                    <span className="text-lg">⋮</span>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700">
-                                                <DropdownMenuItem asChild>
-                                                    <Link href={`/admin/courses/${course.id}`}>
-                                                        수정
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem asChild>
-                                                    <Link href={`/admin/courses/${course.id}/lessons`}>
-                                                        레슨 관리
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="text-red-400">
-                                                    삭제
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
+                    {courses.length === 0 ? (
+                        <div className="text-center py-12">
+                            <p className="text-slate-400 mb-4">아직 등록된 강의가 없습니다</p>
+                            <Link href="/admin/courses/new">
+                                <Button className="bg-gradient-to-r from-blue-600 to-purple-600">
+                                    첫 강의 만들기
+                                </Button>
+                            </Link>
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="border-slate-700">
+                                    <TableHead className="text-slate-400">강의명</TableHead>
+                                    <TableHead className="text-slate-400">상태</TableHead>
+                                    <TableHead className="text-slate-400">접근 권한</TableHead>
+                                    <TableHead className="text-slate-400">생성일</TableHead>
+                                    <TableHead className="text-slate-400 w-32"></TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {courses.map((course) => (
+                                    <TableRow key={course.id} className="border-slate-700">
+                                        <TableCell>
+                                            <Link
+                                                href={`/admin/courses/${course.id}`}
+                                                className="text-white hover:text-blue-400 transition font-medium"
+                                            >
+                                                {course.title}
+                                            </Link>
+                                            <p className="text-xs text-slate-500 mt-1">/{course.slug}</p>
+                                        </TableCell>
+                                        <TableCell>{getStatusBadge(course.status)}</TableCell>
+                                        <TableCell>{getAccessBadge(course.access_level)}</TableCell>
+                                        <TableCell className="text-slate-400 text-sm">
+                                            {new Date(course.created_at).toLocaleDateString('ko-KR')}
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2 justify-end">
+                                                <Link href={`/admin/courses/${course.id}/lessons`}>
+                                                    <Button size="sm" variant="outline" className="text-xs">
+                                                        📚 커리큘럼
+                                                    </Button>
+                                                </Link>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                            <span className="text-lg">⋮</span>
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700">
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/admin/courses/${course.id}`}>
+                                                                수정
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/admin/courses/${course.id}/lessons`}>
+                                                                레슨 관리
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem className="text-red-400">
+                                                            삭제
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
                 </CardContent>
             </Card>
         </div>

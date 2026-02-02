@@ -1,36 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ALL_COURSES, getTotalLessons, getTotalDuration } from '@/data/courses'
-
-// SVG 아이콘 컴포넌트
-const Icons = {
-  home: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-    </svg>
-  ),
-  courses: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-    </svg>
-  ),
-  progress: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-    </svg>
-  ),
-}
-
-// 사이드바 메뉴
-const SIDEBAR_MENU = [
-  { icon: Icons.home, label: '홈', href: '/' },
-  { icon: Icons.courses, label: '전체 강의', href: '/courses' },
-  { icon: Icons.progress, label: '내 학습', href: '/my-courses' },
-]
 
 // Phase 컬러
 const PHASE_COLORS = [
@@ -44,9 +17,6 @@ const PHASE_COLORS = [
 ]
 
 export default function Home() {
-  const pathname = usePathname()
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
       {/* Background Pattern */}
@@ -55,94 +25,8 @@ export default function Home() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-purple-900/10 via-transparent to-transparent" />
       </div>
 
-      {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 h-screen backdrop-blur-xl bg-black/40 border-r border-white/5 z-40 transition-all duration-300 flex flex-col ${sidebarCollapsed ? 'w-20' : 'w-64'}`}>
-        {/* Logo */}
-        <div className="h-20 px-5 flex items-center justify-between">
-          {!sidebarCollapsed && (
-            <Link href="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-lg font-bold shadow-lg shadow-blue-500/20">
-                TP
-              </div>
-              <div className="flex flex-col">
-                <span className="font-semibold tracking-tight">TokenPost</span>
-                <span className="text-xs text-slate-400 -mt-0.5">Academy</span>
-              </div>
-            </Link>
-          )}
-          {sidebarCollapsed && (
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-lg font-bold shadow-lg shadow-blue-500/20 mx-auto">
-              TP
-            </div>
-          )}
-        </div>
-
-        {/* Menu */}
-        <nav className="flex-1 px-3 py-4 overflow-y-auto">
-          {SIDEBAR_MENU.map((item) => {
-            const isActive = pathname === item.href
-            return (
-              <Link
-                key={item.href}
-                href={item.href || '#'}
-                className={`flex items-center gap-3 px-4 py-3 mb-1 rounded-xl transition-all duration-200 ${isActive
-                    ? 'bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-white border border-white/10 shadow-lg shadow-blue-500/5'
-                    : 'text-slate-400 hover:bg-white/5 hover:text-white'
-                  } ${sidebarCollapsed ? 'justify-center px-3' : ''}`}
-              >
-                {item.icon}
-                {!sidebarCollapsed && <span className="text-sm font-medium">{item.label}</span>}
-              </Link>
-            )
-          })}
-
-          {/* Phase 목록 */}
-          {!sidebarCollapsed && (
-            <>
-              <div className="my-4 border-t border-white/5" />
-              <p className="px-4 mb-3 text-xs font-medium text-slate-500 uppercase tracking-wider">
-                커리큘럼
-              </p>
-              {ALL_COURSES.map((course, i) => (
-                <Link
-                  key={course.id}
-                  href={`/courses/${course.slug}`}
-                  className="flex items-center gap-3 px-4 py-2.5 mb-0.5 rounded-lg text-slate-400 hover:bg-white/5 hover:text-white transition-all"
-                >
-                  <div className={`w-2 h-2 rounded-full ${PHASE_COLORS[i].dot}`} />
-                  <span className="text-sm truncate">Phase {course.phase}</span>
-                </Link>
-              ))}
-            </>
-          )}
-        </nav>
-
-        {/* Collapse Button */}
-        <div className="p-4 border-t border-white/5">
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="w-full flex items-center justify-center gap-2 py-2.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition"
-          >
-            <svg className={`w-5 h-5 transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Login */}
-        {!sidebarCollapsed && (
-          <div className="p-4 border-t border-white/5">
-            <Link href="/login">
-              <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border-0 shadow-lg shadow-blue-500/20">
-                로그인
-              </Button>
-            </Link>
-          </div>
-        )}
-      </aside>
-
       {/* Main Content */}
-      <main className={`relative transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-64'}`}>
+      <div className="relative">
         {/* Top Header */}
         <header className="sticky top-0 z-30 backdrop-blur-xl bg-slate-950/60 border-b border-white/5">
           <div className="h-20 px-8 flex items-center justify-between">
@@ -270,7 +154,7 @@ export default function Home() {
             </div>
           </section>
         </div>
-      </main>
+      </div>
     </div>
   )
 }

@@ -7,20 +7,16 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { VideoPlayer } from '@/components/player/VideoPlayer'
+import { VimeoPlayer, VideoPlaceholder } from '@/components/player/VimeoPlayer'
 import { Button } from '@/components/ui/button'
-import { getVideoToken } from '@/actions/stream'
-import { SubscriptionPrompt, VideoPlaceholder } from '@/components/auth/SubscriptionPrompt'
 import { getCourseBySlug, Lesson } from '@/data/courses'
 
 export default function ClassroomPage() {
     const params = useParams()
     const router = useRouter()
-    const [videoToken, setVideoToken] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [progress, setProgress] = useState(0)
-    const [showSubscriptionPrompt, setShowSubscriptionPrompt] = useState(false)
     const [hasAccess, setHasAccess] = useState(false)
     const [sidebarOpen, setSidebarOpen] = useState(true)
 
@@ -38,33 +34,9 @@ export default function ClassroomPage() {
     const overallProgress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
 
     useEffect(() => {
-        async function checkAccessAndGetToken() {
-            try {
-                setIsLoading(true)
-                setError(null)
-
-                const mockSubscriber = document.cookie.includes('mock-subscriber')
-
-                if (isFreePreview || mockSubscriber) {
-                    setHasAccess(true)
-                    const result = await getVideoToken(lessonId)
-                    if (result.success && result.token) {
-                        setVideoToken(result.token)
-                    } else {
-                        setVideoToken('mock-video-token')
-                    }
-                } else {
-                    setHasAccess(false)
-                    setShowSubscriptionPrompt(true)
-                }
-            } catch (err) {
-                console.error('Failed to check access:', err)
-                setError('영상을 불러올 수 없습니다.')
-            } finally {
-                setIsLoading(false)
-            }
-        }
-        checkAccessAndGetToken()
+        // 개발 모드: 항상 접근 허용
+        setHasAccess(true)
+        setIsLoading(false)
     }, [lessonId, isFreePreview])
 
     const handleTimeUpdate = (current: number, total: number) => {
@@ -108,17 +80,13 @@ export default function ClassroomPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
-            {showSubscriptionPrompt && (
-                <SubscriptionPrompt onClose={() => setShowSubscriptionPrompt(false)} />
-            )}
-
             {/* Background */}
             <div className="fixed inset-0 opacity-30 pointer-events-none">
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-transparent to-transparent" />
             </div>
 
             {/* Header */}
-            <header className="fixed top-0 left-0 right-0 h-16 backdrop-blur-xl bg-slate-950/80 border-b border-white/5 z-50">
+            <header className="sticky top-0 left-0 right-0 h-16 backdrop-blur-xl bg-slate-950/80 border-b border-white/5 z-30">
                 <div className="h-full px-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <button
@@ -166,7 +134,7 @@ export default function ClassroomPage() {
             </header>
 
             {/* Main Layout */}
-            <div className="pt-16 flex min-h-screen">
+            <div className="flex min-h-[calc(100vh-4rem)]">
                 {/* Video Area */}
                 <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'lg:mr-80 xl:mr-96' : ''}`}>
                     {/* Video Player */}
@@ -175,11 +143,9 @@ export default function ClassroomPage() {
                             <div className="aspect-video flex items-center justify-center">
                                 <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                             </div>
-                        ) : hasAccess && videoToken ? (
-                            <VideoPlayer
-                                token={videoToken}
-                                onTimeUpdate={handleTimeUpdate}
-                                onEnded={handleVideoEnded}
+                        ) : hasAccess && currentLesson?.vimeoId ? (
+                            <VimeoPlayer
+                                videoId={currentLesson.vimeoId}
                                 autoplay
                             />
                         ) : (
@@ -293,10 +259,10 @@ export default function ClassroomPage() {
                                             >
                                                 {/* Status */}
                                                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${lesson.isCompleted
-                                                        ? 'bg-emerald-500/20 text-emerald-400'
-                                                        : isActive
-                                                            ? 'bg-gradient-to-br from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/20'
-                                                            : 'bg-white/5 text-slate-500'
+                                                    ? 'bg-emerald-500/20 text-emerald-400'
+                                                    : isActive
+                                                        ? 'bg-gradient-to-br from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/20'
+                                                        : 'bg-white/5 text-slate-500'
                                                     }`}>
                                                     {lesson.isCompleted ? (
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
