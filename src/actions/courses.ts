@@ -49,20 +49,38 @@ export interface Lesson {
 
 // ============ COURSES ============
 
-export async function getCourses() {
+export interface CourseWithStats extends Course {
+    lessonsCount: number
+    duration: string
+    phase: number
+}
+
+export async function getCourses(): Promise<CourseWithStats[]> {
     const supabase = await createServerClient()
 
     const { data, error } = await supabase
         .from('courses')
-        .select('*')
-        .order('created_at', { ascending: false })
+        .select(`
+            *,
+            modules (
+                lessons (id)
+            )
+        `)
+        .order('created_at', { ascending: true })
 
     if (error) {
         console.error('Error fetching courses:', error)
         return []
     }
 
-    return data as Course[]
+    // Map to include lessonsCount
+    return data.map((course: any) => ({
+        ...course,
+        lessonsCount: course.modules?.reduce((acc: number, m: any) => acc + (m.lessons?.length || 0), 0) || 0,
+        // Default duration and phase if not present
+        duration: '준비 중',
+        phase: 1 // Default phase or logic to infer
+    }))
 }
 
 export async function getCourseBySlug(slug: string) {

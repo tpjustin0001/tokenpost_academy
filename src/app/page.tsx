@@ -1,9 +1,11 @@
-'use client'
+/**
+ * 메인 홈페이지
+ * TokenPost Academy 유저 전용 - 강의와 커리큘럼 소개
+ */
 
 import Link from 'next/link'
-import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { ALL_COURSES, getTotalLessons, getTotalDuration } from '@/data/courses'
+import { getCourses } from '@/actions/courses'
 
 // Phase 컬러
 const PHASE_COLORS = [
@@ -16,7 +18,14 @@ const PHASE_COLORS = [
   { bg: 'bg-slate-500/10', border: 'border-slate-500/20', text: 'text-slate-400', dot: 'bg-slate-500' },
 ]
 
-export default function Home() {
+export default async function Home() {
+  const courses = await getCourses()
+
+  // 통계 계산
+  const totalLessons = courses.reduce((acc, course) => acc + (course.lessonsCount || 0), 0)
+  // 단순 갯수만 표시하거나, 나중에 실제 duration 파싱 필요
+  const totalDuration = "준비 중"
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
       {/* Background Pattern */}
@@ -32,7 +41,7 @@ export default function Home() {
           <div className="h-20 px-8 flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">커리큘럼</h1>
-              <p className="text-sm text-slate-400 mt-0.5">총 {getTotalLessons()}개 강의 · {getTotalDuration()}</p>
+              <p className="text-sm text-slate-400 mt-0.5">총 {totalLessons}개 강의</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="relative">
@@ -60,7 +69,7 @@ export default function Home() {
               <p className="text-sm font-medium text-blue-400 mb-2">TokenPost Academy</p>
               <h2 className="text-3xl font-bold mb-3">암호화폐 투자 마스터 코스</h2>
               <p className="text-slate-400 max-w-2xl mb-6">
-                입문부터 고급까지, 7개의 Phase로 구성된 체계적인 커리큘럼으로
+                입문부터 고급까지, TokenPost Academy의 체계적인 커리큘럼으로
                 암호화폐 투자의 모든 것을 배워보세요.
               </p>
               <div className="flex items-center gap-6 text-sm">
@@ -68,19 +77,13 @@ export default function Home() {
                   <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
-                  <span>{getTotalLessons()}개 강의</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-300">
-                  <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>{getTotalDuration()}</span>
+                  <span>{totalLessons}개 강의</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-300">
                   <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z" />
                   </svg>
-                  <span>7개 Phase</span>
+                  <span>{courses.length}개 코스</span>
                 </div>
               </div>
             </div>
@@ -88,50 +91,60 @@ export default function Home() {
 
           {/* Course Grid */}
           <div className="space-y-6">
-            {ALL_COURSES.map((course, i) => {
-              const colors = PHASE_COLORS[i]
-              return (
-                <Link key={course.id} href={`/courses/${course.slug}`}>
-                  <div className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br from-white/5 to-white/[0.02] border ${colors.border} p-6 hover:border-white/20 transition-all duration-300 hover:shadow-xl`}>
-                    <div className={`absolute top-0 right-0 w-48 h-48 bg-gradient-to-br ${course.gradient} opacity-5 blur-3xl transition-opacity group-hover:opacity-10`} />
+            {courses.length === 0 ? (
+              <div className="text-center py-20 text-slate-400 border border-white/5 rounded-2xl bg-white/[0.02]">
+                <p className="text-xl mb-2">등록된 강의가 없습니다.</p>
+                <p className="text-sm">관리자 페이지에서 강의를 등록해주세요.</p>
+              </div>
+            ) : (
+              courses.filter((c: any) => c.status === 'published').map((course, i) => {
+                const colors = PHASE_COLORS[i % PHASE_COLORS.length]
+                // 임시 Phase 번호 - DB에 phase 컬럼이 없으므로 인덱스로 대체하거나 1로 고정
+                const phaseNum = i + 1
 
-                    <div className="relative flex flex-col md:flex-row md:items-center gap-4">
-                      {/* Phase Badge */}
-                      <div className={`flex-shrink-0 w-16 h-16 rounded-2xl ${colors.bg} flex items-center justify-center`}>
-                        <span className={`text-2xl font-bold ${colors.text}`}>{course.phase}</span>
-                      </div>
+                return (
+                  <Link key={course.id} href={`/courses/${course.slug}`}>
+                    <div className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br from-white/5 to-white/[0.02] border ${colors.border} p-6 hover:border-white/20 transition-all duration-300 hover:shadow-xl`}>
+                      <div className={`absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-blue-500 to-purple-500 opacity-5 blur-3xl transition-opacity group-hover:opacity-10`} />
 
-                      {/* Info */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-1">
-                          <h3 className="text-xl font-semibold group-hover:text-blue-400 transition-colors">
-                            {course.title}
-                          </h3>
-                          <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${colors.bg} ${colors.text}`}>
-                            {course.level}
-                          </span>
+                      <div className="relative flex flex-col md:flex-row md:items-center gap-4">
+                        {/* Phase Badge */}
+                        <div className={`flex-shrink-0 w-16 h-16 rounded-2xl ${colors.bg} flex items-center justify-center`}>
+                          <span className={`text-2xl font-bold ${colors.text}`}>{phaseNum}</span>
                         </div>
-                        <p className="text-sm text-slate-500 mb-2">{course.subtitle}</p>
-                        <p className="text-sm text-slate-400 line-clamp-2">{course.description}</p>
-                      </div>
 
-                      {/* Meta */}
-                      <div className="flex md:flex-col items-center md:items-end gap-3 md:gap-1 text-sm text-slate-500">
-                        <span>{course.lessonsCount}개 강의</span>
-                        <span>{course.duration}</span>
-                      </div>
+                        {/* Info */}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-1">
+                            <h3 className="text-xl font-semibold group-hover:text-blue-400 transition-colors">
+                              {course.title}
+                            </h3>
+                            <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${colors.bg} ${colors.text}`}>
+                              {course.access_level === 'free' ? '입문' : (course.access_level === 'plus' ? '중급' : '고급')}
+                            </span>
+                          </div>
+                          <p className="text-sm text-slate-500 mb-2">{course.slug}</p>
+                          <p className="text-sm text-slate-400 line-clamp-2">{course.description || '강의 설명이 없습니다.'}</p>
+                        </div>
 
-                      {/* Arrow */}
-                      <div className="hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/5 group-hover:bg-blue-500/20 transition-colors">
-                        <svg className="w-5 h-5 text-slate-400 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
+                        {/* Meta */}
+                        <div className="flex md:flex-col items-center md:items-end gap-3 md:gap-1 text-sm text-slate-500">
+                          <span>{course.lessonsCount}개 강의</span>
+                          <span>{course.duration || '준비 중'}</span>
+                        </div>
+
+                        {/* Arrow */}
+                        <div className="hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/5 group-hover:bg-blue-500/20 transition-colors">
+                          <svg className="w-5 h-5 text-slate-400 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              )
-            })}
+                  </Link>
+                )
+              })
+            )}
           </div>
 
           {/* Membership Banner */}
