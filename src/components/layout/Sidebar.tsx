@@ -93,9 +93,9 @@ export function Sidebar() {
                 {!collapsed && (
                     <>
                         <div className="my-4 border-t border-white/5" />
-                        <p className="px-4 mb-3 text-xs font-medium text-slate-500 uppercase tracking-wider">
-                            커리큘럼
-                        </p>
+                        <Link href="/curriculum" className="block px-4 mb-3 text-xs font-medium text-slate-500 uppercase tracking-wider hover:text-white transition-colors cursor-pointer">
+                            커리큘럼 (로드맵)
+                        </Link>
                         {ALL_COURSES.map((course, i) => {
                             const colors = PHASE_COLORS[i] || PHASE_COLORS[0]
                             return (
