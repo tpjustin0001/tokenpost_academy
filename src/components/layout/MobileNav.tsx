@@ -18,19 +18,21 @@ import {
     AccordionTrigger,
 } from "@/components/ui/accordion"
 import { Button } from '@/components/ui/button'
-import { Menu, BookOpen, LayoutDashboard, Home } from 'lucide-react'
+import { Menu, BookOpen, LayoutDashboard, Home, Video } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 
 // SVG 아이콘 컴포넌트
 const Icons = {
     home: <Home className="w-5 h-5" />,
     courses: <BookOpen className="w-5 h-5" />,
+    live: <Video className="w-5 h-5" />,
     progress: <LayoutDashboard className="w-5 h-5" />,
 }
 
 const SIDEBAR_MENU = [
     { icon: Icons.home, label: '홈', href: '/' },
     { icon: Icons.courses, label: '전체 강의', href: '/courses' },
+    { icon: Icons.live, label: '라이브', href: '/live' },
     { icon: Icons.progress, label: '내 학습', href: '/dashboard' },
 ]
 
