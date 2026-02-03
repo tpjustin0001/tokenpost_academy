@@ -83,6 +83,9 @@ export default async function AdminLayout({
                     <NavItem href="/admin/courses" icon="📚">
                         강의 관리
                     </NavItem>
+                    <NavItem href="/admin/lives" icon="🔴">
+                        라이브 관리
+                    </NavItem>
                     <NavItem href="/admin/users" icon="👥">
                         사용자 관리
                     </NavItem>
