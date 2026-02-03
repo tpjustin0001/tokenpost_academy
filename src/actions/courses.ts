@@ -5,7 +5,7 @@
  * Supabase와 통신하여 CRUD 수행
  */
 
-import { createClient, createStaticClient } from '@/lib/supabase/server'
+import { createClient, createStaticClient, createAdminClient } from '@/lib/supabase/server'
 
 export interface Course {
     id: string
@@ -64,13 +64,36 @@ export interface CourseWithStats extends Course {
             id: string
             title: string
             position: number
+            duration: string | null
         }[]
     }[]
 }
 
+// Helper to sum durations like "10:30" format
+function sumDurations(lessons: { duration: string | null }[]): string {
+    let totalSeconds = 0
+    for (const lesson of lessons) {
+        if (lesson.duration) {
+            const parts = lesson.duration.split(':').map(Number)
+            if (parts.length === 2) {
+                totalSeconds += parts[0] * 60 + parts[1]
+            } else if (parts.length === 3) {
+                totalSeconds += parts[0] * 3600 + parts[1] * 60 + parts[2]
+            }
+        }
+    }
+    if (totalSeconds === 0) return '준비 중'
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    if (hours > 0) {
+        return `${hours}시간 ${minutes}분`
+    }
+    return `${minutes}분`
+}
+
 export async function getCourses(): Promise<CourseWithStats[]> {
     try {
-        const supabase = createStaticClient()
+        const supabase = createAdminClient()
 
         const { data, error } = await supabase
             .from('courses')
@@ -83,7 +106,8 @@ export async function getCourses(): Promise<CourseWithStats[]> {
                     lessons (
                         id,
                         title,
-                        position
+                        position,
+                        duration
                     )
                 )
             `)
@@ -112,13 +136,16 @@ export async function getCourses(): Promise<CourseWithStats[]> {
             return course
         })
 
-        // Map to include lessonsCount and dynamic phase
-        return sortedData.map((course: any, index: number) => ({
-            ...course,
-            lessonsCount: course.modules?.reduce((acc: number, m: any) => acc + (m.lessons?.length || 0), 0) || 0,
-            duration: '준비 중',
-            phase: index + 1
-        }))
+        // Map to include lessonsCount and dynamic phase with real duration
+        return sortedData.map((course: any, index: number) => {
+            const allLessons = course.modules?.flatMap((m: any) => m.lessons || []) || []
+            return {
+                ...course,
+                lessonsCount: allLessons.length,
+                duration: sumDurations(allLessons),
+                phase: index + 1
+            }
+        })
     } catch (err) {
         console.error('Unexpected error in getCourses:', err)
         return []
