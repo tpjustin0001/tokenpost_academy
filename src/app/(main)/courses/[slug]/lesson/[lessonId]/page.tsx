@@ -46,39 +46,46 @@ export default function ClassroomPage() {
         async function loadCourse() {
             try {
                 setIsLoading(true)
-                // Fetch from Server Action
+
+                // Fetch course data first (required for other calls)
                 const data = await getCourseBySlug(courseSlug)
                 if (!data) {
                     setError('강의를 찾을 수 없습니다')
-                } else {
-                    setCourse({
-                        ...data,
-                        phase: 1 // Default phase if missing
-                    })
-
-                    // Fetch Progress
-                    // Extract all lesson IDs
-                    const allLessonIds = data.modules?.flatMap((m: any) => m.lessons.map((l: any) => l.id)) || []
-                    if (allLessonIds.length > 0) {
-                        const progressResult = await getLessonsProgress(allLessonIds)
-                        if (progressResult.success && progressResult.data) {
-                            setProgressMap(progressResult.data)
-                        }
-                    }
-
-                    // Check Access
-                    const accessResult = await checkCurrentLessonAccess(lessonId)
-                    setHasAccess(accessResult.hasAccess)
-                    if (!accessResult.hasAccess) {
-                        setAccessError(accessResult.reason || '권한이 없습니다.')
-                    } else {
-                        setAccessError(null)
-                    }
-
-                    // Fetch Quiz
-                    const quizResult = await getQuizForLesson(lessonId)
-                    setQuizData(quizResult)
+                    setIsLoading(false)
+                    return
                 }
+
+                setCourse({
+                    ...data,
+                    phase: 1
+                })
+
+                // Extract all lesson IDs
+                const allLessonIds = data.modules?.flatMap((m: any) => m.lessons.map((l: any) => l.id)) || []
+
+                // Run remaining calls in parallel for faster loading
+                const [progressResult, accessResult, quizResult] = await Promise.all([
+                    allLessonIds.length > 0 ? getLessonsProgress(allLessonIds) : Promise.resolve({ success: false, data: null }),
+                    checkCurrentLessonAccess(lessonId),
+                    getQuizForLesson(lessonId)
+                ])
+
+                // Process progress
+                if (progressResult.success && progressResult.data) {
+                    setProgressMap(progressResult.data)
+                }
+
+                // Process access
+                setHasAccess(accessResult.hasAccess)
+                if (!accessResult.hasAccess) {
+                    setAccessError(accessResult.reason || '권한이 없습니다.')
+                } else {
+                    setAccessError(null)
+                }
+
+                // Process quiz
+                setQuizData(quizResult)
+
             } catch (err) {
                 console.error(err)
                 setError('강의 로딩 중 오류가 발생했습니다')
@@ -87,7 +94,7 @@ export default function ClassroomPage() {
             }
         }
         loadCourse()
-    }, [courseSlug, lessonId]) // lessonId changes shouldn't necessarily reload course, but simplicity
+    }, [courseSlug, lessonId])
 
     // Derive data from course state
     const allLessons = course?.modules?.flatMap((m: any) => m.lessons) || []
