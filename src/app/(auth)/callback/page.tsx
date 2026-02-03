@@ -43,47 +43,31 @@ function CallbackContent() {
 
         const processLogin = async () => {
             try {
-                setStatus('토큰 교환 중...')
-                // 2. Exchange Token (via Proxy)
-                const tokenResponse = await exchangeToken(code, codeVerifier)
+                setStatus('로그인 처리 중...')
 
-                if (!tokenResponse.access_token) {
-                    throw new Error('No access token received')
-                }
-
-                setStatus('사용자 정보 조회 중...')
-                // 3. Fetch User Info (via Proxy)
-                const userInfo = await fetchUserInfo(tokenResponse.access_token)
-                console.log('User Info:', userInfo)
-
-                // 4. Create Session (Server Action via API or specialized logic)
-                if (!userInfo.uid || !userInfo.email) {
-                    throw new Error(`필수 정보 누락 (UID/Email). 수신된 정보: ${JSON.stringify(userInfo)}`)
-                }
-
-                const loginResponse = await fetch('/api/auth/login', {
+                // 통합 로그인 API 호출 (토큰 교환 + 사용자 정보 + 세션 생성을 서버에서 한 번에 처리)
+                const response = await fetch('/api/auth/fast-login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        userId: userInfo.uid,
-                        email: userInfo.email,
-                        name: userInfo.nickname,
-                        role: userInfo.grade === 'admin' ? 'admin' : 'user', // Simple role mapping
-                        accessToken: tokenResponse.access_token
+                        code,
+                        code_verifier: codeVerifier,
+                        redirect_uri: window.location.origin + '/callback'
                     })
                 })
 
-                if (!loginResponse.ok) {
-                    const errorData = await loginResponse.json().catch(() => ({}))
-                    throw new Error(errorData.error || '세션 생성 실패')
+                const data = await response.json()
+
+                if (!response.ok) {
+                    throw new Error(data.error || '로그인 실패')
                 }
 
-                // 5. Cleanup & Redirect
+                // Cleanup & Redirect
                 sessionStorage.removeItem('oauth_state')
                 sessionStorage.removeItem('oauth_code_verifier')
 
                 setStatus('로그인 성공! 이동 중...')
-                router.push('/') // or previous path
+                router.push('/')
                 router.refresh()
 
             } catch (error) {
