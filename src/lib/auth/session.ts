@@ -11,6 +11,7 @@ export type SessionPayload = {
     role?: string
     name?: string
     nickname?: string
+    grade?: string  // 멤버십 등급 (free, plus, pro, admin 등)
     expiresAt: Date
 }
 
@@ -35,9 +36,9 @@ export async function decrypt(session: string | undefined = '') {
     }
 }
 
-export async function createSession(userId: string, email: string, name?: string, role: string = 'user') {
+export async function createSession(userId: string, email: string, name?: string, role: string = 'user', grade?: string) {
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    const session = await encrypt({ userId, email, role, name, expiresAt })
+    const session = await encrypt({ userId, email, role, name, grade, expiresAt })
 
     // Cookie Store는 Server Action이나 Route Handler에서만 사용 가능
     const cookieStore = await cookies()

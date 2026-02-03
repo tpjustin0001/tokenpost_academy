@@ -2,6 +2,9 @@
 
 import { getSession } from '@/lib/auth/session'
 
+// 멤버십으로 인정되는 등급 리스트
+const MEMBERSHIP_GRADES = ['plus', 'pro', 'premium', 'admin', 'GoldI', 'GoldII', 'GoldIII', 'GoldIV', 'GoldV', 'PlatinumI', 'PlatinumII', 'PlatinumIII', 'PlatinumIV', 'PlatinumV', 'Diamond', 'SilverI', 'SilverII', 'SilverIII', 'SilverIV', 'SilverV']
+
 export async function getUserStatus() {
     const session = await getSession()
 
@@ -9,13 +12,16 @@ export async function getUserStatus() {
         return { isLoggedIn: false, hasMembership: false }
     }
 
+    const grade = session.grade || 'free'
+    // grade가 free나 Bronze 등급이 아니면 멤버십 보유로 판단
+    const hasMembership = session.role === 'admin' ||
+        MEMBERSHIP_GRADES.some(g => grade.toLowerCase().includes(g.toLowerCase())) ||
+        (grade !== 'free' && !grade.toLowerCase().startsWith('bronze'))
+
     return {
         isLoggedIn: true,
         userId: session.userId,
-        // TODO: 실제 멤버십 로직이 있다면 여기서 체크
-        // 현재는 'basic' 이상이면 멤버십 있다고 가정하거나, grade 필드 확인
-        // OAUTH SCOPE에서 grade를 가져오므로 세션에 저장된 grade 확인
-        hasMembership: session.role === 'admin' || (session as any).grade !== 'free',
-        grade: (session as any).grade || 'free'
+        hasMembership,
+        grade
     }
 }

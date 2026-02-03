@@ -68,8 +68,8 @@ export async function POST(req: NextRequest) {
             }, { status: 400 })
         }
 
-        // 3. Create Session
-        await createSession(uid, email, nickname, grade === 'admin' ? 'admin' : 'user')
+        // 3. Create Session (with grade for membership check)
+        await createSession(uid, email, nickname, grade === 'admin' ? 'admin' : 'user', grade)
 
         return NextResponse.json({
             success: true,
