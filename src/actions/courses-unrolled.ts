@@ -1,9 +1,9 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 
 export async function getCoursesWithModules() {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     const { data, error } = await supabase
         .from('courses')
@@ -12,17 +12,18 @@ export async function getCoursesWithModules() {
             modules (
                 id,
                 title,
-                order_index,
+                position,
                 lessons (
                     id,
                     title,
                     duration,
                     access_level,
-                    order_index
+                    position
                 )
             )
         `)
-        .order('created_at', { ascending: false })
+        .eq('status', 'published')  // Only show published courses
+        .order('created_at', { ascending: true })
 
     if (error) {
         console.error('Error fetching courses with modules:', error)
@@ -33,10 +34,10 @@ export async function getCoursesWithModules() {
     const sortedData = data.map((course: any) => ({
         ...course,
         modules: course.modules
-            ?.sort((a: any, b: any) => a.order_index - b.order_index)
+            ?.sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
             .map((module: any) => ({
                 ...module,
-                lessons: module.lessons?.sort((a: any, b: any) => a.order_index - b.order_index)
+                lessons: module.lessons?.sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
             }))
     }))
 
