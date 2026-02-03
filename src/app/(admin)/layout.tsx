@@ -11,9 +11,9 @@ import { getSession } from '@/lib/auth/session'
 
 // 관리자 이메일 화이트리스트
 const ADMIN_EMAILS = [
-    'admin@tokenpost.kr',
-    'hsv.gill@tokenpost.kr', // Add known admin emails if any, or just keep generic for now
-    // TODO: 환경 변수로 이동
+    'justin@tokenpost.kr',
+    'sonny@tokenpost.kr',
+    'james@tokenpost.kr',
 ]
 
 // 개발 모드 플래그 - false로 변경하여 보안 강화
