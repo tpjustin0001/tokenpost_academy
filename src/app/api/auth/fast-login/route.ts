@@ -59,7 +59,9 @@ export async function POST(req: NextRequest) {
         const uid = userData.user?.uuid || userData.sub
         const email = userData.user?.email
         const nickname = userData.user?.nickname
-        const grade = userData.grade?.code
+        // subscription.Plan이 실제 멤버십 레벨 (Free, Plus, Pro 등)
+        const subscriptionPlan = userData.subscription?.Plan || userData.subscription?.plan || 'free'
+        const subscriptionStatus = userData.subscription?.status === 'Y'
 
         if (!uid || !email) {
             return NextResponse.json({
@@ -68,12 +70,15 @@ export async function POST(req: NextRequest) {
             }, { status: 400 })
         }
 
+        // grade: 구독 상태가 Y이면 해당 Plan 사용, 아니면 'free'
+        const membershipGrade = subscriptionStatus ? subscriptionPlan.toLowerCase() : 'free'
+
         // 3. Create Session (with grade for membership check)
-        await createSession(uid, email, nickname, grade === 'admin' ? 'admin' : 'user', grade)
+        await createSession(uid, email, nickname, membershipGrade === 'admin' ? 'admin' : 'user', membershipGrade)
 
         return NextResponse.json({
             success: true,
-            user: { uid, email, nickname, grade }
+            user: { uid, email, nickname, grade: membershipGrade, subscriptionStatus }
         })
 
     } catch (error) {
