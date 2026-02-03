@@ -91,7 +91,8 @@ export async function checkCurrentLessonAccess(lessonId: string): Promise<Enroll
 
     // 세션이 없어도 무료 강의 확인을 위해 verifyEnrollment 호출
     const userId = session?.userId || 'guest'
-    const userRole = session?.role || null
+    // grade가 멤버십 레벨 (free, plus, alpha 등)
+    const userGrade = session?.grade || null
 
-    return verifyEnrollment(userId, lessonId, userRole)
+    return verifyEnrollment(userId, lessonId, userGrade)
 }

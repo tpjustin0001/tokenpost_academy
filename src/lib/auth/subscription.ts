@@ -5,14 +5,16 @@
  * 토큰포스트 구독자 여부 확인 및 영상 접근 권한 관리
  */
 
-// 구독자 등급 정의 (TokenPost grade 기준)
-// TODO: 실제 TokenPost 등급 체계에 맞게 수정
+// 구독자 등급 정의 (TokenPost grade 기준 + Academy 멤버십)
 const SUBSCRIBER_GRADES = [
+    'plus',
+    'alpha',
     'premium',
     'vip',
     'subscriber',
     '구독자',
     '프리미엄',
+    'admin',
 ]
 
 export interface SubscriptionStatus {
