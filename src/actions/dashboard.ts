@@ -1,6 +1,6 @@
 'use server'
 
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { getSession } from '@/lib/auth/session'
 
 export interface DashboardStat {
@@ -38,7 +38,7 @@ export async function getUserDashboardData(): Promise<DashboardData | null> {
     const session = await getSession()
     if (!session) return null
 
-    const supabase = await createServerClient()
+    const supabase = await createClient()
     const { userId } = session
 
     // 1. Fetch all courses with structure

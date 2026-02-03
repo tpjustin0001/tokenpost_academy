@@ -5,7 +5,7 @@
  */
 
 import { getSession } from '@/lib/auth/session'
-// import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export interface ProgressData {
     lessonId: string
@@ -30,28 +30,21 @@ export async function saveProgress(data: ProgressData): Promise<ProgressResult> 
             return { success: false, error: 'Unauthorized' }
         }
 
-        // 2. 진도율 저장 (TODO: Supabase 연동)
-        console.log('[saveProgress]', {
-            userId: user.userId,
-            lessonId: data.lessonId,
-            currentTime: data.currentTime,
-            duration: data.duration,
-            progress: Math.round((data.currentTime / data.duration) * 100),
-            completed: data.completed,
-        })
+        // 2. 진도율 저장
+        const supabase = await createClient()
 
-        // TODO: Supabase에 진도 저장
-        // const supabase = await createServerClient()
-        // await supabase.from('user_progress').upsert({
-        //   user_id: user.id,
-        //   lesson_id: data.lessonId,
-        //   watch_time: data.currentTime,
-        //   progress_percent: Math.round((data.currentTime / data.duration) * 100),
-        //   is_completed: data.completed,
-        //   last_watched_at: new Date().toISOString(),
-        // }, {
-        //   onConflict: 'user_id, lesson_id',
-        // })
+        const progressPercent = Math.round((data.currentTime / data.duration) * 100)
+
+        await supabase.from('user_progress').upsert({
+            user_id: user.userId, // session.userId
+            lesson_id: data.lessonId,
+            watch_time: data.currentTime,
+            progress_percent: isNaN(progressPercent) ? 0 : progressPercent,
+            is_completed: data.completed,
+            last_watched_at: new Date().toISOString(),
+        }, {
+            onConflict: 'user_id, lesson_id',
+        })
 
         return { success: true }
     } catch (error) {
@@ -70,21 +63,20 @@ export async function markLessonComplete(lessonId: string): Promise<ProgressResu
             return { success: false, error: 'Unauthorized' }
         }
 
-        console.log('[markLessonComplete]', {
-            userId: user.userId,
-            lessonId,
-        })
+        const supabase = await createClient()
 
-        // TODO: Supabase에 완료 상태 저장
-        // const supabase = await createServerClient()
-        // await supabase.from('user_progress').upsert({
-        //   user_id: user.id,
-        //   lesson_id: lessonId,
-        //   is_completed: true,
-        //   completed_at: new Date().toISOString(),
-        // }, {
-        //   onConflict: 'user_id, lesson_id',
-        // })
+        // 완료 상태만 업데이트 (기존 진도율은 유지하거나 100으로?)
+        // 여기서는 is_completed만 true로 업데이트
+        await supabase.from('user_progress').upsert({
+            user_id: user.userId,
+            lesson_id: lessonId,
+            is_completed: true,
+            progress_percent: 100, // 완료하면 100%로
+            completed_at: new Date().toISOString(),
+            last_watched_at: new Date().toISOString(),
+        }, {
+            onConflict: 'user_id, lesson_id',
+        })
 
         return { success: true }
     } catch (error) {
@@ -94,33 +86,40 @@ export async function markLessonComplete(lessonId: string): Promise<ProgressResu
 }
 
 /**
- * 사용자의 강의 진도율 조회
+ * 사용자의 강의 진도율 조회 (다수의 레슨)
  */
-export async function getCourseProgress(courseId: string) {
+export async function getLessonsProgress(lessonIds: string[]) {
     try {
         const user = await getSession()
         if (!user) {
-            return { success: false, error: 'Unauthorized', data: null }
+            return { success: false, error: 'Unauthorized', data: {} }
         }
 
-        // TODO: Supabase에서 진도 조회
-        // const supabase = await createServerClient()
-        // const { data } = await supabase
-        //   .from('user_progress')
-        //   .select('lesson_id, progress_percent, is_completed')
-        //   .eq('user_id', user.id)
-        //   .in('lesson_id', lessonIds)
+        const supabase = await createClient()
 
-        // Mock 데이터 반환
+        const { data } = await supabase
+            .from('user_progress')
+            .select('lesson_id, progress_percent, is_completed')
+            .eq('user_id', user.userId) // session.userId
+            .in('lesson_id', lessonIds)
+
+        const progressMap: Record<string, { progress: number; isCompleted: boolean }> = {}
+
+        if (data) {
+            data.forEach((item: any) => {
+                progressMap[item.lesson_id] = {
+                    progress: item.progress_percent || 0,
+                    isCompleted: item.is_completed || false
+                }
+            })
+        }
+
         return {
             success: true,
-            data: {
-                completedLessons: ['lesson-1', 'lesson-2'],
-                totalProgress: 22,
-            },
+            data: progressMap
         }
     } catch (error) {
-        console.error('[getCourseProgress] Error:', error)
-        return { success: false, error: 'Failed to get progress', data: null }
+        console.error('[getLessonsProgress] Error:', error)
+        return { success: false, error: 'Failed to get progress', data: {} }
     }
 }

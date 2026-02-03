@@ -6,15 +6,18 @@
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
+import Image from 'next/image'
+import { getSession } from '@/lib/auth/session'
 
 // 관리자 이메일 화이트리스트
 const ADMIN_EMAILS = [
     'admin@tokenpost.kr',
+    'hsv.gill@tokenpost.kr', // Add known admin emails if any, or just keep generic for now
     // TODO: 환경 변수로 이동
 ]
 
-// 개발 모드 플래그 - true로 설정하면 모든 인증 우회
-const DEV_MODE = true
+// 개발 모드 플래그 - false로 변경하여 보안 강화
+const DEV_MODE = process.env.DEV_MODE === 'true'
 
 async function checkAdminAccess() {
     // 개발 모드에서는 항상 접근 허용
@@ -22,17 +25,24 @@ async function checkAdminAccess() {
         return true
     }
 
-    const cookieStore = await cookies()
-    const mockSession = cookieStore.get('mock-session')
-    const mockAdmin = cookieStore.get('mock-admin')
-
-    // TODO: 실제 세션에서 이메일 확인
-    // 개발 모드에서는 mock-admin 쿠키로 확인
-    if (!mockSession || !mockAdmin) {
+    // 실제 세션 확인
+    const session = await getSession()
+    if (!session || !session.email) {
         return false
     }
 
-    return true
+    // 이메일 화이트리스트 체크 (또는 isAdmin 플래그 확인)
+    // 현재는 간단히 이메일 목록으로 확인
+    if (ADMIN_EMAILS.includes(session.email)) {
+        return true
+    }
+
+    // 추가: 특정 도메인 허용 (@tokenpost.kr)
+    if (session.email.endsWith('@tokenpost.kr')) {
+        return true
+    }
+
+    return false
 }
 
 export default async function AdminLayout({
@@ -53,8 +63,13 @@ export default async function AdminLayout({
                 {/* 로고 */}
                 <div className="p-6 border-b border-slate-700">
                     <Link href="/admin" className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                            TP
+                        <div className="relative w-8 h-8">
+                            <Image
+                                src="/images/tokenpost-emblem.png"
+                                alt="TokenPost Admin"
+                                fill
+                                className="object-contain"
+                            />
                         </div>
                         <span className="text-lg font-semibold text-white">Admin</span>
                     </Link>

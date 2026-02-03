@@ -10,7 +10,8 @@
  */
 
 import { canAccessVideo } from '@/lib/auth/subscription'
-// import { createServerClient } from '@/lib/supabase/server'
+import { getSession } from '@/lib/auth/session'
+import { createClient } from '@/lib/supabase/server'
 
 interface EnrollmentCheckResult {
     hasAccess: boolean
@@ -35,31 +36,39 @@ export async function verifyEnrollment(
 ): Promise<EnrollmentCheckResult> {
     console.log(`[verifyEnrollment] Checking access for user: ${userId}, lesson: ${lessonId}, grade: ${userGrade}`)
 
-    // TODO: Supabase에서 레슨 정보 조회
-    // 현재는 Mock 데이터 사용
-    const mockLesson = {
-        id: lessonId,
-        videoUid: 'mock-video-uid',
-        isFreePreview: lessonId === 'lesson-1', // 첫 번째 레슨만 무료 프리뷰
-        courseId: 'mock-course-id',
+    const supabase = await createClient()
+
+    // 레슨 정보 조회 (access_level, course_id 등)
+    const { data: lesson, error } = await supabase
+        .from('lessons')
+        .select('*, modules(*)')
+        .eq('id', lessonId)
+        .single()
+
+    if (error || !lesson) {
+        console.error('Lesson not found:', error)
+        return { hasAccess: false, reason: '강의를 찾을 수 없습니다.' }
     }
 
+    const isFreePreview = lesson.access_level === 'free'
+    const courseId = lesson.modules?.course_id
+
     // 구독자 여부 확인
-    const accessCheck = await canAccessVideo(userGrade, mockLesson.isFreePreview)
+    const accessCheck = await canAccessVideo(userGrade, isFreePreview)
 
     if (!accessCheck.canAccess) {
         return {
             hasAccess: false,
-            isFreePreview: mockLesson.isFreePreview,
+            isFreePreview: isFreePreview,
             reason: accessCheck.reason,
         }
     }
 
     return {
         hasAccess: true,
-        courseId: mockLesson.courseId,
-        videoUid: mockLesson.videoUid,
-        isFreePreview: mockLesson.isFreePreview,
+        courseId: courseId,
+        videoUid: lesson.vimeo_id,
+        isFreePreview: isFreePreview,
     }
 }
 
@@ -72,4 +81,17 @@ export async function canViewLesson(
 ): Promise<boolean> {
     const result = await canAccessVideo(userGrade, isFreePreview)
     return result.canAccess
+}
+
+/**
+ * 현재 세션 기준으로 레슨 접근 권한 확인 (Client Component용)
+ */
+export async function checkCurrentLessonAccess(lessonId: string): Promise<EnrollmentCheckResult> {
+    const session = await getSession()
+
+    // 세션이 없어도 무료 강의 확인을 위해 verifyEnrollment 호출
+    const userId = session?.userId || 'guest'
+    const userRole = session?.role || null
+
+    return verifyEnrollment(userId, lessonId, userRole)
 }

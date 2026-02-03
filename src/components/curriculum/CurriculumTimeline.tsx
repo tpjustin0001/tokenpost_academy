@@ -27,7 +27,7 @@ export function CurriculumTimeline({ courses }: CurriculumTimelineProps) {
             <div className="text-center mb-16">
                 <h1 className="text-4xl font-bold text-white mb-4">학습 로드맵</h1>
                 <p className="text-slate-400">
-                    Phase 1부터 7까지, 체계적으로 설계된 커리큘럼을 따라가세요.
+                    지속적으로 업데이트되는 커리큘럼을 통해 체계적인 학습 로드맵을 따라가세요.
                 </p>
             </div>
 

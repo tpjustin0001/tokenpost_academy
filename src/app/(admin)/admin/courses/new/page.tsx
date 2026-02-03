@@ -39,7 +39,7 @@ export default function NewCoursePage() {
             })
 
             if (result.success) {
-                router.push('/admin/courses')
+                router.push(`/admin/courses/${result.course.id}/lessons`)
             } else {
                 setError(result.error || '강의 생성에 실패했습니다')
             }

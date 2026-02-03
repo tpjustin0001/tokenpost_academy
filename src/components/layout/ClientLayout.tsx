@@ -4,7 +4,23 @@ import { usePathname } from 'next/navigation'
 import { useSidebar } from '@/components/layout/SidebarContext'
 import { Sidebar } from '@/components/layout/Sidebar'
 
-export function ClientLayout({ children }: { children: React.ReactNode }) {
+type ClientLayoutProps = {
+    children: React.ReactNode
+    courses?: {
+        id: string
+        title: string
+        slug: string
+        phase: number
+        modules: any[]
+    }[]
+    user?: any
+}
+
+import { MobileNav } from '@/components/layout/MobileNav'
+
+// ... existing imports ...
+
+export function ClientLayout({ children, courses = [], user }: ClientLayoutProps) {
     const { isOpen } = useSidebar()
     const pathname = usePathname()
 
@@ -17,8 +33,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
     return (
         <>
-            <Sidebar />
-            <main className={`transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-20'}`}>
+            <MobileNav courses={courses} user={user} />
+            <Sidebar courses={courses} user={user} />
+            <main className={`transition-all duration-300 md:pt-0 ${isOpen ? 'md:ml-64' : 'md:ml-20'} pt-16`}>
                 {children}
             </main>
         </>

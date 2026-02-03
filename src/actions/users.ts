@@ -5,7 +5,7 @@
  * Supabase와 통신하여 사용자 CRUD 수행
  */
 
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export interface User {
     id: string
@@ -34,7 +34,7 @@ interface GetUsersFilters {
 // ============ USERS ============
 
 export async function getUsers(filters?: GetUsersFilters) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     let query = supabase
         .from('users')
@@ -67,8 +67,56 @@ export async function getUsers(filters?: GetUsersFilters) {
     return { users: data as User[], count: count || 0 }
 }
 
+export async function syncUserFromAuth(userId: string, email: string) {
+    const supabase = await createClient()
+
+    // Check if exists
+    const { data: existing } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+    if (existing) {
+        // User already exists, update if necessary (e.g., email changed)
+        if (existing.email !== email) {
+            const { error } = await supabase
+                .from('users')
+                .update({ email, updated_at: new Date().toISOString() })
+                .eq('id', userId)
+            if (error) {
+                console.error('Error updating user email during sync:', error)
+                return { success: false, error: error.message }
+            }
+        }
+        return { success: true, user: existing as User }
+    } else {
+        // User does not exist, create new entry
+        const { data, error } = await supabase
+            .from('users')
+            .insert({
+                id: userId,
+                email: email,
+                nickname: email.split('@')[0], // Default nickname from email
+                subscription_level: 'free',
+                role: 'student',
+                is_banned: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            })
+            .select()
+            .single()
+
+        if (error) {
+            console.error('Error creating new user during sync:', error)
+            return { success: false, error: error.message }
+        }
+        return { success: true, user: data as User }
+    }
+}
+
 export async function getUserById(id: string) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const { data, error } = await supabase
         .from('users')
@@ -85,7 +133,7 @@ export async function getUserById(id: string) {
 }
 
 export async function updateUser(id: string, data: Partial<Pick<User, 'subscription_level' | 'role' | 'is_banned' | 'ban_reason'>>) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const { error } = await supabase
         .from('users')
@@ -109,7 +157,7 @@ export async function unbanUser(id: string) {
 }
 
 export async function getUserStats() {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const { count: totalUsers } = await supabase
         .from('users')

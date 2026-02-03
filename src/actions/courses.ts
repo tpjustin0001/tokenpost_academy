@@ -5,7 +5,7 @@
  * Supabase와 통신하여 CRUD 수행
  */
 
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient, createStaticClient } from '@/lib/supabase/server'
 
 export interface Course {
     id: string
@@ -40,7 +40,10 @@ export interface Lesson {
     module_id: string
     title: string
     vimeo_id: string | null
+    vimeo_embed_url: string | null
     duration: string | null
+    description: string | null
+    thumbnail_url: string | null
     access_level: 'free' | 'plus' | 'alpha'
     position: number
     is_published: boolean
@@ -53,35 +56,68 @@ export interface CourseWithStats extends Course {
     lessonsCount: number
     duration: string
     phase: number
+    modules: {
+        id: string
+        title: string
+        position: number
+        lessons: {
+            id: string
+            title: string
+            position: number
+        }[]
+    }[]
 }
 
 export async function getCourses(): Promise<CourseWithStats[]> {
     try {
-        const supabase = await createServerClient()
+        const supabase = createStaticClient()
 
         const { data, error } = await supabase
             .from('courses')
             .select(`
                 *,
                 modules (
-                    lessons (id)
+                    id,
+                    title,
+                    position,
+                    lessons (
+                        id,
+                        title,
+                        position
+                    )
                 )
             `)
             .order('created_at', { ascending: true })
 
         if (error) {
-            console.error('Error fetching courses:', error)
+            console.error('Error fetching courses:', JSON.stringify(error, null, 2))
             return []
         }
 
         if (!data) return []
 
-        // Map to include lessonsCount
-        return data.map((course: any) => ({
+        // Sort modules and lessons
+        const sortedData = data.map((course: any) => {
+            // Sort modules
+            if (course.modules) {
+                course.modules.sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
+
+                // Sort lessons in each module
+                course.modules.forEach((module: any) => {
+                    if (module.lessons) {
+                        module.lessons.sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
+                    }
+                })
+            }
+            return course
+        })
+
+        // Map to include lessonsCount and dynamic phase
+        return sortedData.map((course: any, index: number) => ({
             ...course,
             lessonsCount: course.modules?.reduce((acc: number, m: any) => acc + (m.lessons?.length || 0), 0) || 0,
             duration: '준비 중',
-            phase: 1
+            phase: index + 1
         }))
     } catch (err) {
         console.error('Unexpected error in getCourses:', err)
@@ -90,7 +126,7 @@ export async function getCourses(): Promise<CourseWithStats[]> {
 }
 
 export async function getCourseBySlug(slug: string) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const { data, error } = await supabase
         .from('courses')
@@ -105,7 +141,10 @@ export async function getCourseBySlug(slug: string) {
         .single()
 
     if (error) {
-        console.error('Error fetching course:', error)
+        // PGRST116: JSON object requested, multiple (or no) rows returned
+        if (error.code !== 'PGRST116') {
+            console.error('Error fetching course:', error)
+        }
         return null
     }
 
@@ -123,7 +162,7 @@ export async function getCourseBySlug(slug: string) {
 }
 
 export async function getCourseById(id: string) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const { data, error } = await supabase
         .from('courses')
@@ -161,7 +200,7 @@ export async function createCourse(data: {
     description?: string
     access_level?: 'free' | 'plus' | 'alpha'
 }) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const { data: course, error } = await supabase
         .from('courses')
@@ -184,7 +223,7 @@ export async function createCourse(data: {
 }
 
 export async function updateCourse(id: string, data: Partial<Course>) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const { error } = await supabase
         .from('courses')
@@ -200,7 +239,7 @@ export async function updateCourse(id: string, data: Partial<Course>) {
 }
 
 export async function deleteCourse(id: string) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const { error } = await supabase
         .from('courses')
@@ -218,7 +257,7 @@ export async function deleteCourse(id: string) {
 // ============ MODULES ============
 
 export async function createModule(courseId: string, title: string) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Get max position
     const { data: existing } = await supabase
@@ -249,7 +288,7 @@ export async function createModule(courseId: string, title: string) {
 }
 
 export async function updateModule(id: string, title: string) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const { error } = await supabase
         .from('modules')
@@ -265,7 +304,7 @@ export async function updateModule(id: string, title: string) {
 }
 
 export async function deleteModule(id: string) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const { error } = await supabase
         .from('modules')
@@ -280,15 +319,20 @@ export async function deleteModule(id: string) {
     return { success: true }
 }
 
+
+
 // ============ LESSONS ============
 
 export async function createLesson(moduleId: string, data: {
     title: string
     vimeo_id?: string
+    vimeo_embed_url?: string
     duration?: string
+    description?: string
+    thumbnail_url?: string
     access_level?: 'free' | 'plus' | 'alpha'
 }) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Get max position
     const { data: existing } = await supabase
@@ -306,7 +350,10 @@ export async function createLesson(moduleId: string, data: {
             module_id: moduleId,
             title: data.title,
             vimeo_id: data.vimeo_id || null,
+            vimeo_embed_url: data.vimeo_embed_url || null,
             duration: data.duration || null,
+            description: data.description || null,
+            thumbnail_url: data.thumbnail_url || null,
             access_level: data.access_level || 'plus',
             position: position + 1,
             is_published: false
@@ -323,7 +370,7 @@ export async function createLesson(moduleId: string, data: {
 }
 
 export async function updateLesson(id: string, data: Partial<Lesson>) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const { error } = await supabase
         .from('lessons')
@@ -339,7 +386,7 @@ export async function updateLesson(id: string, data: Partial<Lesson>) {
 }
 
 export async function deleteLesson(id: string) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const { error } = await supabase
         .from('lessons')

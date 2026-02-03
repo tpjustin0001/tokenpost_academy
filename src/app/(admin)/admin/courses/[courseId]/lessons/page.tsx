@@ -26,6 +26,8 @@ import {
     type ModuleWithLessons,
     type Lesson
 } from '@/actions/courses'
+import { getVimeoVideoInfo } from '@/actions/vimeo'
+import { Textarea } from '@/components/ui/textarea'
 
 // 접근 권한 뱃지
 function getAccessBadge(level: string) {
@@ -59,6 +61,10 @@ export default function LessonsManagePage() {
     const [newLessonTitle, setNewLessonTitle] = useState('')
     const [editingLessonId, setEditingLessonId] = useState<string | null>(null)
     const [vimeoIdInput, setVimeoIdInput] = useState('')
+    const [vimeoEmbedUrlInput, setVimeoEmbedUrlInput] = useState('')
+    const [durationInput, setDurationInput] = useState('')
+    const [descriptionInput, setDescriptionInput] = useState('')
+    const [thumbnailUrlInput, setThumbnailUrlInput] = useState('')
     const [lessonAccessLevel, setLessonAccessLevel] = useState<'free' | 'plus' | 'alpha'>('plus')
 
     // 데이터 로드
@@ -124,21 +130,47 @@ export default function LessonsManagePage() {
 
     const extractVimeoId = (input: string): string => {
         if (!input) return ''
-        const match = input.match(/(?:vimeo\.com\/|video\/)?(\d+)/)
-        return match ? match[1] : input.trim()
+
+        // 1. iframe 태그나 전체 HTML에서 src 추출 시도
+        const iframeMatch = input.match(/src="([^"]+)"/)
+        let urlToCheck = input
+
+        if (iframeMatch) {
+            urlToCheck = iframeMatch[1]
+        }
+
+        // 2. ID 추출 (vimeo.com/123 or player.vimeo.com/video/123)
+        const idMatch = urlToCheck.match(/(?:vimeo\.com\/(?:video\/)?|player\.vimeo\.com\/video\/)(\d+)/)
+        return idMatch ? idMatch[1] : input.trim()
+    }
+
+    const extractEmbedSrc = (input: string): string => {
+        if (!input) return ''
+        const iframeMatch = input.match(/src="([^"]+)"/)
+        return iframeMatch ? iframeMatch[1] : input.trim()
     }
 
     const handleSaveLesson = async (lessonId: string) => {
         setSaving(true)
         const vimeoId = extractVimeoId(vimeoIdInput)
+        // Embed URL 필드에 전체 iframe 코드를 넣었을 경우 clean URL만 추출
+        const vimeoEmbedUrl = extractEmbedSrc(vimeoEmbedUrlInput)
 
         await updateLesson(lessonId, {
-            vimeo_id: vimeoId || null,
+            vimeo_id: vimeoId.match(/^\d+$/) ? vimeoId : null, // ID가 숫자일 때만 저장
+            vimeo_embed_url: vimeoEmbedUrl || null,
+            duration: durationInput || null,
+            description: descriptionInput || null,
+            thumbnail_url: thumbnailUrlInput || null,
             access_level: lessonAccessLevel
         })
         await loadCourse()
         setEditingLessonId(null)
         setVimeoIdInput('')
+        setVimeoEmbedUrlInput('')
+        setDurationInput('')
+        setDescriptionInput('')
+        setThumbnailUrlInput('')
         setSaving(false)
     }
 
@@ -154,7 +186,26 @@ export default function LessonsManagePage() {
     const openLessonDialog = (lesson: Lesson) => {
         setEditingLessonId(lesson.id)
         setVimeoIdInput(lesson.vimeo_id || '')
+        setVimeoEmbedUrlInput(lesson.vimeo_embed_url || '')
+        setDurationInput(lesson.duration || '')
+        setDescriptionInput(lesson.description || '')
+        setThumbnailUrlInput(lesson.thumbnail_url || '')
         setLessonAccessLevel(lesson.access_level)
+    }
+
+    const handleFetchVimeoInfo = async () => {
+        if (!vimeoIdInput) return
+        setLoading(true)
+        const result = await getVimeoVideoInfo(vimeoIdInput)
+        if (result.success && result.data) {
+            setDurationInput(result.data.duration)
+            setDescriptionInput(result.data.description)
+            setThumbnailUrlInput(result.data.thumbnail_url)
+            alert('Vimeo 정보를 성공적으로 가져왔습니다!')
+        } else {
+            alert('Vimeo 정보를 가져오지 못했습니다.')
+        }
+        setLoading(false)
     }
 
     if (loading) {
@@ -370,11 +421,58 @@ export default function LessonsManagePage() {
                                                             <div className="space-y-4 pt-4">
                                                                 <div className="space-y-2">
                                                                     <Label className="text-slate-300">Vimeo URL 또는 ID</Label>
+                                                                    <div className="flex gap-2">
+                                                                        <Input
+                                                                            value={vimeoIdInput}
+                                                                            onChange={(e) => setVimeoIdInput(e.target.value)}
+                                                                            placeholder="https://vimeo.com/123456789"
+                                                                            className="bg-slate-700 border-slate-600 text-white flex-1"
+                                                                        />
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="secondary"
+                                                                            onClick={handleFetchVimeoInfo}
+                                                                            disabled={loading || !vimeoIdInput}
+                                                                            className="shrink-0"
+                                                                        >
+                                                                            정보 가져오기
+                                                                        </Button>
+                                                                    </div>
+                                                                    <p className="text-xs text-slate-500">
+                                                                        공개 또는 도메인 제한된 영상의 URL을 입력하세요.
+                                                                    </p>
+                                                                </div>
+
+                                                                <div className="space-y-2">
+                                                                    <Label className="text-slate-300">임베드 코드/URL (비공개 영상용)</Label>
+                                                                    <Textarea
+                                                                        value={vimeoEmbedUrlInput}
+                                                                        onChange={(e) => setVimeoEmbedUrlInput(e.target.value)}
+                                                                        placeholder='<iframe src="https://player.vimeo.com/video/..." ...></iframe>'
+                                                                        className="bg-slate-700 border-slate-600 text-white min-h-[80px] font-mono text-xs"
+                                                                    />
+                                                                    <p className="text-xs text-slate-500">
+                                                                        Vimeo에서 복사한 전체 임베드 코드를 붙여넣으면 자동으로 주소만 추출하여 저장합니다.
+                                                                    </p>
+                                                                </div>
+
+                                                                <div className="space-y-2">
+                                                                    <Label className="text-slate-300">재생 시간</Label>
                                                                     <Input
-                                                                        value={vimeoIdInput}
-                                                                        onChange={(e) => setVimeoIdInput(e.target.value)}
-                                                                        placeholder="https://vimeo.com/123456789"
+                                                                        value={durationInput}
+                                                                        onChange={(e) => setDurationInput(e.target.value)}
+                                                                        placeholder="예: 12:34"
                                                                         className="bg-slate-700 border-slate-600 text-white"
+                                                                    />
+                                                                </div>
+
+                                                                <div className="space-y-2">
+                                                                    <Label className="text-slate-300">설명 (Summary)</Label>
+                                                                    <Textarea
+                                                                        value={descriptionInput}
+                                                                        onChange={(e) => setDescriptionInput(e.target.value)}
+                                                                        placeholder="강의 설명을 입력하세요"
+                                                                        className="bg-slate-700 border-slate-600 text-white min-h-[100px]"
                                                                     />
                                                                 </div>
                                                                 <div className="space-y-2">

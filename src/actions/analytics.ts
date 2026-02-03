@@ -5,7 +5,7 @@
  * 수강 현황, 인기 강의, 이탈률 분석
  */
 
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 // ============ 수강 현황 (Enrollments) ============
 
@@ -26,7 +26,7 @@ export async function getEnrollments(filters?: {
     course_id?: string
     limit?: number
 }) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     let query = supabase
         .from('enrollments')
@@ -55,7 +55,7 @@ export async function getEnrollments(filters?: {
 }
 
 export async function getEnrollmentStats() {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const { count: totalEnrollments } = await supabase
         .from('enrollments')
@@ -95,7 +95,7 @@ export interface PopularCourse {
 }
 
 export async function getPopularCourses(limit: number = 10) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // 1) 강의별 수강 수 집계
     const { data: courses } = await supabase
@@ -157,7 +157,7 @@ export interface LessonDropoff {
 }
 
 export async function getCourseDropoffAnalysis(courseId: string) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // 1) 해당 강의의 모든 레슨 가져오기 (순서대로)
     const { data: modules } = await supabase
@@ -223,7 +223,7 @@ export async function getCourseDropoffAnalysis(courseId: string) {
 // ============ 레슨별 시청 시간 분석 ============
 
 export async function getWatchTimeAnalysis(courseId: string) {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const { data } = await supabase
         .from('user_progress')

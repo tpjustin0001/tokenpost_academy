@@ -38,7 +38,7 @@ export default function LoginPage() {
                     </div>
 
                     <p className="text-center text-sm text-slate-500">
-                        토큰포스트 회원이라면 별도 가입 없이
+                        토큰포스트 구독자 회원이라면 별도 가입 없이
                         <br />
                         바로 수강 신청이 가능합니다.
                     </p>

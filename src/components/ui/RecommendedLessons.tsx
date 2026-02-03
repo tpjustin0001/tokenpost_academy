@@ -7,12 +7,27 @@
  */
 
 import Link from 'next/link'
-import { Course, Lesson } from '@/data/courses'
+import { CourseWithModules, Lesson } from '@/actions/courses'
+
+// Phase Gradients
+const PHASE_GRADIENTS = [
+    'bg-gradient-to-br from-emerald-500 to-teal-600',
+    'bg-gradient-to-br from-blue-500 to-indigo-600',
+    'bg-gradient-to-br from-violet-500 to-purple-600',
+    'bg-gradient-to-br from-amber-500 to-orange-600',
+    'bg-gradient-to-br from-rose-500 to-red-600',
+    'bg-gradient-to-br from-cyan-500 to-blue-600',
+    'bg-gradient-to-br from-fuchsia-500 to-pink-600',
+]
+
+function getGradient(phase: number) {
+    return PHASE_GRADIENTS[(phase - 1) % PHASE_GRADIENTS.length] || PHASE_GRADIENTS[0]
+}
 
 interface RecommendedLessonsProps {
-    course: Course
+    course: any // Using any for flexibility with CourseWithModules and custom props
     currentLessonId: string
-    allCourses?: Course[]
+    allCourses?: any[]
 }
 
 export function RecommendedLessons({
@@ -21,8 +36,8 @@ export function RecommendedLessons({
     allCourses = [],
 }: RecommendedLessonsProps) {
     // 현재 코스의 모든 레슨
-    const allLessons = course.sections.flatMap(s => s.lessons)
-    const currentIndex = allLessons.findIndex(l => l.id === currentLessonId)
+    const allLessons = course.modules?.flatMap((m: any) => m.lessons) || []
+    const currentIndex = allLessons.findIndex((l: any) => l.id === currentLessonId)
 
     // 다음 강의들 (현재 강의 이후 최대 5개)
     const nextLessons = allLessons.slice(currentIndex + 1, currentIndex + 6)
@@ -31,12 +46,12 @@ export function RecommendedLessons({
     const otherCourseRecommendations = allCourses
         .filter(c => c.id !== course.id)
         .flatMap(c =>
-            c.sections.flatMap(s =>
-                s.lessons.filter(l => l.isFreePreview).map(l => ({
+            c.modules?.flatMap((m: any) =>
+                m.lessons.filter((l: any) => l.access_level === 'free').map((l: any) => ({
                     ...l,
                     course: c,
                 }))
-            )
+            ) || []
         )
         .slice(0, 4)
 
@@ -47,7 +62,7 @@ export function RecommendedLessons({
                 <div>
                     <h3 className="text-sm font-semibold text-white mb-3">다음 강의</h3>
                     <div className="space-y-2">
-                        {nextLessons.map((lesson, idx) => (
+                        {nextLessons.map((lesson: any, idx: number) => (
                             <LessonCard
                                 key={lesson.id}
                                 lesson={lesson}
@@ -65,7 +80,7 @@ export function RecommendedLessons({
                 <div>
                     <h3 className="text-sm font-semibold text-white mb-3">다음 추천 강의</h3>
                     <div className="space-y-3">
-                        {otherCourseRecommendations.map((item) => (
+                        {otherCourseRecommendations.map((item: any) => (
                             <Link
                                 key={item.id}
                                 href={`/courses/${item.course.slug}/lesson/${item.id}`}
@@ -73,7 +88,7 @@ export function RecommendedLessons({
                             >
                                 {/* 썸네일 */}
                                 <div className="w-24 h-14 rounded bg-gradient-to-br from-slate-700 to-slate-800 flex-shrink-0 overflow-hidden">
-                                    <div className={`w-full h-full ${item.course.gradient} opacity-60`} />
+                                    <div className={`w-full h-full ${getGradient(item.course.phase || 1)} opacity-60`} />
                                 </div>
 
                                 {/* 정보 */}
@@ -82,9 +97,9 @@ export function RecommendedLessons({
                                         {item.title}
                                     </p>
                                     <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-xs text-slate-500">Phase {item.course.phase}</span>
+                                        <span className="text-xs text-slate-500">Phase {item.course.phase || 1}</span>
                                         <span className="text-xs text-slate-600">•</span>
-                                        <span className="text-xs text-slate-500">{item.duration}</span>
+                                        <span className="text-xs text-slate-500">{item.duration || '준비 중'}</span>
                                     </div>
                                 </div>
                             </Link>
@@ -120,7 +135,7 @@ function LessonCard({ lesson, courseSlug, index, isSmall }: LessonCardProps) {
                 <p className="text-sm text-white truncate group-hover:text-blue-400 transition">
                     {lesson.title}
                 </p>
-                <span className="text-xs text-slate-500">{lesson.duration}</span>
+                <span className="text-xs text-slate-500">{lesson.duration || '-'}</span>
             </div>
 
             {/* 재생 아이콘 */}
@@ -137,7 +152,7 @@ function LessonCard({ lesson, courseSlug, index, isSmall }: LessonCardProps) {
  * 강의 목록 그리드 컴포넌트 (전체 강의 페이지용)
  */
 interface CourseGridProps {
-    courses: Course[]
+    courses: any[]
 }
 
 export function CourseGrid({ courses }: CourseGridProps) {
@@ -151,14 +166,14 @@ export function CourseGrid({ courses }: CourseGridProps) {
                 >
                     {/* 썸네일 */}
                     <div className="aspect-video rounded-lg overflow-hidden bg-slate-800 mb-3 relative">
-                        <div className={`w-full h-full ${course.gradient} flex items-center justify-center`}>
+                        <div className={`w-full h-full ${getGradient(course.phase || 1)} flex items-center justify-center`}>
                             <span className="text-4xl font-bold text-white/20">
-                                Phase {course.phase}
+                                Phase {course.phase || 1}
                             </span>
                         </div>
 
                         {/* 무료 배지 */}
-                        {course.isFree && (
+                        {course.access_level === 'free' && (
                             <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-xs font-medium bg-emerald-500 text-white">
                                 무료 공개
                             </span>
@@ -179,14 +194,14 @@ export function CourseGrid({ courses }: CourseGridProps) {
                         {course.title}
                     </h3>
                     <p className="text-sm text-slate-400 line-clamp-1 mb-2">
-                        {course.subtitle}
+                        {course.subtitle || course.description}
                     </p>
                     <div className="flex items-center gap-3 text-xs text-slate-500">
-                        <span>Phase {course.phase}</span>
+                        <span>Phase {course.phase || 1}</span>
                         <span>•</span>
-                        <span>{course.lessonsCount}개 강의</span>
+                        <span>{course.lessonsCount || 0}개 강의</span>
                         <span>•</span>
-                        <span>{course.duration}</span>
+                        <span>{course.duration || '준비 중'}</span>
                     </div>
                 </Link>
             ))}

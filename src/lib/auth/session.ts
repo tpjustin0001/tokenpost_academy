@@ -23,6 +23,7 @@ export async function encrypt(payload: SessionPayload) {
 }
 
 export async function decrypt(session: string | undefined = '') {
+    if (!session) return null
     try {
         const { payload } = await jwtVerify(session, key, {
             algorithms: ['HS256'],
@@ -57,6 +58,9 @@ export async function deleteSession() {
 export async function verifySession() {
     const cookieStore = await cookies()
     const cookie = cookieStore.get('session')?.value
+
+    if (!cookie) return null
+
     const session = await decrypt(cookie)
 
     if (!session?.userId) {

@@ -4,10 +4,10 @@
  */
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 async function getDashboardStats() {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // 통계 쿼리 병렬 실행
     const [
