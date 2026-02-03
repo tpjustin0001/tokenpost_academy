@@ -5,7 +5,7 @@
  * Supabase와 통신하여 사용자 CRUD 수행
  */
 
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 
 export interface User {
     id: string
@@ -34,7 +34,7 @@ interface GetUsersFilters {
 // ============ USERS ============
 
 export async function getUsers(filters?: GetUsersFilters) {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     let query = supabase
         .from('users')
@@ -68,7 +68,7 @@ export async function getUsers(filters?: GetUsersFilters) {
 }
 
 export async function syncUserFromAuth(userId: string, email: string) {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     // Check if exists
     const { data: existing } = await supabase
@@ -116,7 +116,7 @@ export async function syncUserFromAuth(userId: string, email: string) {
 }
 
 export async function getUserById(id: string) {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     const { data, error } = await supabase
         .from('users')
@@ -133,7 +133,7 @@ export async function getUserById(id: string) {
 }
 
 export async function updateUser(id: string, data: Partial<Pick<User, 'subscription_level' | 'role' | 'is_banned' | 'ban_reason'>>) {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     const { error } = await supabase
         .from('users')
@@ -157,7 +157,7 @@ export async function unbanUser(id: string) {
 }
 
 export async function getUserStats() {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     const { count: totalUsers } = await supabase
         .from('users')
