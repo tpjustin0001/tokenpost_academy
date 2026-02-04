@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog'
 import {
     getCourseById,
+    getAdminCourseById, // Use dedicated admin fetcher
     createModule,
     updateModule,
     deleteModule,
@@ -74,7 +75,8 @@ export default function LessonsManagePage() {
 
     const loadCourse = async () => {
         setLoading(true)
-        const data = await getCourseById(courseId)
+        // [MODIFIED] Use getAdminCourseById to ensure raw video data is fetched for editing
+        const data = await getAdminCourseById(courseId)
         if (data) {
             setCourse({ title: data.title, modules: data.modules || [] })
         }

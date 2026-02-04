@@ -6,6 +6,8 @@
  */
 
 import { createClient, createStaticClient, createAdminClient } from '@/lib/supabase/server'
+import { getSession } from '@/lib/auth/session'
+import { checkSubscriptionStatus } from '@/lib/auth/subscription'
 
 export interface Course {
     id: string
@@ -177,15 +179,85 @@ export async function getCourseBySlug(slug: string) {
 
     // Sort modules and lessons by position
     if (data?.modules) {
+        // Check if user is admin via Session (robust check)
+        const session = await getSession()
+        const userGrade = session?.grade
+        const subStatus = await checkSubscriptionStatus(userGrade)
+        const isAdmin = session?.role === 'admin' || subStatus.grade === 'admin'
+
+        // Determine user weight based on unified status
+        let userWeight = 0
+        if (isAdmin) {
+            userWeight = 999 // Admin sees everything
+        } else if (subStatus.grade?.toLowerCase().includes('alpha')) {
+            userWeight = 2
+        } else if (subStatus.isSubscriber) {
+            userWeight = 1 // Any subscriber is at least 'plus' level
+        }
+
+        const levelWeight = { 'free': 0, 'plus': 1, 'alpha': 2 }
+
         data.modules.sort((a: Module, b: Module) => a.position - b.position)
         data.modules.forEach((module: ModuleWithLessons) => {
             if (module.lessons) {
                 module.lessons.sort((a: Lesson, b: Lesson) => a.position - b.position)
+
+                // Scrubbing Logic
+                module.lessons.forEach((lesson: Lesson) => {
+                    const requiredLevel = lesson.access_level || 'plus'
+                    const contentWeight = levelWeight[requiredLevel as keyof typeof levelWeight] || 1
+
+                    if (userWeight < contentWeight) {
+                        // SCRUB DATA
+                        lesson.vimeo_id = null
+                        lesson.vimeo_embed_url = null
+                        // Keep title, description, thumbnail for display
+                    }
+                })
             }
         })
     }
-
     return data as CourseWithModules
+}
+
+// --- Admin Dedicated Action to bypass all scrubbing ---
+// --- Admin Dedicated Action to bypass all scrubbing ---
+export async function getAdminCourseById(id: string) {
+    // Use Admin Client (Service Role) to bypass RLS and Cookies
+    const supabase = createAdminClient()
+
+    try {
+        const { data, error } = await supabase
+            .from('courses')
+            .select(`
+                *,
+                modules (
+                    *,
+                    lessons (*)
+                )
+            `)
+            .eq('id', id)
+            .single()
+
+        if (error) {
+            console.error('Error fetching admin course:', error)
+            return null
+        }
+
+        if (data?.modules && Array.isArray(data.modules)) {
+            data.modules.sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
+            data.modules.forEach((module: any) => {
+                if (module.lessons && Array.isArray(module.lessons)) {
+                    module.lessons.sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
+                    // NO SCRUBBING HERE - Admin sees all raw inputs
+                }
+            })
+        }
+        return data as CourseWithModules
+    } catch (err) {
+        console.error('Unexpected error in getAdminCourseById:', err)
+        return null
+    }
 }
 
 export async function getCourseById(id: string) {
@@ -210,10 +282,40 @@ export async function getCourseById(id: string) {
 
     // Sort modules and lessons by position
     if (data?.modules) {
+        // Check if user is admin via Session (robust check)
+        const session = await getSession()
+        const userGrade = session?.grade
+        const subStatus = await checkSubscriptionStatus(userGrade)
+        const isAdmin = session?.role === 'admin' || subStatus.grade === 'admin'
+
+        // Determine user weight based on unified status
+        let userWeight = 0
+        if (isAdmin) {
+            userWeight = 999 // Admin sees everything
+        } else if (subStatus.grade?.toLowerCase().includes('alpha')) {
+            userWeight = 2
+        } else if (subStatus.isSubscriber) {
+            userWeight = 1 // Any subscriber is at least 'plus' level
+        }
+
+        const levelWeight = { 'free': 0, 'plus': 1, 'alpha': 2 }
+
         data.modules.sort((a: Module, b: Module) => a.position - b.position)
         data.modules.forEach((module: ModuleWithLessons) => {
             if (module.lessons) {
                 module.lessons.sort((a: Lesson, b: Lesson) => a.position - b.position)
+
+                // Scrubbing Logic
+                module.lessons.forEach((lesson: Lesson) => {
+                    const requiredLevel = lesson.access_level || 'plus'
+                    const contentWeight = levelWeight[requiredLevel as keyof typeof levelWeight] || 1
+
+                    if (userWeight < contentWeight) {
+                        // SCRUB DATA
+                        lesson.vimeo_id = null
+                        lesson.vimeo_embed_url = null
+                    }
+                })
             }
         })
     }
