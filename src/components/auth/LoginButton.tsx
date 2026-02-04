@@ -24,9 +24,9 @@ export function LoginButton({ className, children }: LoginButtonProps) {
             // PKCE 파라미터 생성 및 로그인 URL 빌드
             const { url, state, codeVerifier } = await buildAuthorizationUrl()
 
-            // 세션 스토리지에 PKCE 파라미터 저장 (콜백에서 사용)
-            sessionStorage.setItem('oauth_state', state)
-            sessionStorage.setItem('oauth_code_verifier', codeVerifier)
+            // 로컬 스토리지에 PKCE 파라미터 저장 (모바일 탭 전환 이슈 대응)
+            localStorage.setItem('oauth_state', state)
+            localStorage.setItem('oauth_code_verifier', codeVerifier)
 
             // 토큰포스트 로그인 페이지로 리다이렉트
             window.location.href = url

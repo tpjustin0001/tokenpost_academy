@@ -24,19 +24,25 @@ function CallbackContent() {
             return
         }
 
-        const savedState = sessionStorage.getItem('oauth_state')
-        const codeVerifier = sessionStorage.getItem('oauth_code_verifier')
+        // 2. State & Verifier Check
+        const savedState = localStorage.getItem('oauth_state')
+        const codeVerifier = localStorage.getItem('oauth_code_verifier')
+
+        // Debug logging for mobile troubleshooting
+        console.log('[Callback] Params:', { code: !!code, state: !!state })
+        console.log('[Callback] Storage:', { savedState: !!savedState, codeVerifier: !!codeVerifier })
 
         if (state !== savedState) {
-            console.error('State mismatch')
+            console.error('State mismatch', { received: state, saved: savedState })
             setStatus('보안 검증 실패 (State mismatch)')
+            // localStorage.removeItem('oauth_state') // Keep for debug if needed, or clear
             setTimeout(() => router.push('/login'), 2000)
             return
         }
 
         if (!codeVerifier) {
             console.error('No code verifier found')
-            setStatus('인증 정보를 찾을 수 없습니다.')
+            setStatus('인증 정보를 찾을 수 없습니다. (모바일의 경우 새 창에서 열렸을 수 있습니다)')
             setTimeout(() => router.push('/login'), 2000)
             return
         }
@@ -63,8 +69,8 @@ function CallbackContent() {
                 }
 
                 // Cleanup & Redirect
-                sessionStorage.removeItem('oauth_state')
-                sessionStorage.removeItem('oauth_code_verifier')
+                localStorage.removeItem('oauth_state')
+                localStorage.removeItem('oauth_code_verifier')
 
                 setStatus('로그인 성공! 이동 중...')
                 router.push('/')
