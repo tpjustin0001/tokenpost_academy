@@ -27,7 +27,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
 
     // 2) Supabase에 있으면 DB 데이터 사용
     if (dbCourse) {
-        const allLessons = dbCourse.modules?.flatMap(m => m.lessons) || []
+        const allLessons = dbCourse.modules?.flatMap((m: any) => m.lessons) || []
         const firstLesson = allLessons[0]
 
         return (
@@ -123,8 +123,8 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                             </div>
 
                             <div className="space-y-4">
-                                <Accordion type="multiple" className="w-full space-y-4" defaultValue={dbCourse.modules?.map((m, i) => `item-${i}`)}>
-                                    {dbCourse.modules?.map((module, moduleIndex) => (
+                                <Accordion type="multiple" className="w-full space-y-4" defaultValue={dbCourse.modules?.map((m: any, i: number) => `item-${i}`)}>
+                                    {dbCourse.modules?.map((module: any, moduleIndex: number) => (
                                         <AccordionItem key={module.id} value={`item-${moduleIndex}`} className="rounded-2xl bg-white/50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 overflow-hidden px-0">
                                             <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-slate-100 dark:hover:bg-white/5 data-[state=open]:bg-slate-100 dark:data-[state=open]:bg-white/5 text-foreground">
                                                 <div className="flex items-center justify-between w-full mr-4">
@@ -139,7 +139,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                                             </AccordionTrigger>
                                             <AccordionContent className="pb-0">
                                                 <div className="border-t border-slate-200 dark:border-white/5">
-                                                    {module.lessons?.map((lesson, lessonIndex) => (
+                                                    {module.lessons?.map((lesson: any, lessonIndex: number) => (
                                                         <Link
                                                             key={lesson.id}
                                                             href={`/courses/${slug}/lesson/${lesson.id}`}

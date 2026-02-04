@@ -154,31 +154,46 @@ export async function getCourses(): Promise<CourseWithStats[]> {
     }
 }
 
-export async function getCourseBySlug(slug: string) {
-    const supabase = await createClient()
+// Internal helper for cached data fetching
+import { unstable_cache } from 'next/cache'
 
-    const { data, error } = await supabase
-        .from('courses')
-        .select(`
-            *,
-            modules (
+const getCachedCourseData = unstable_cache(
+    async (slug: string) => {
+        const supabase = createStaticClient()
+        const { data, error } = await supabase
+            .from('courses')
+            .select(`
                 *,
-                lessons (*)
-            )
-        `)
-        .eq('slug', slug)
-        .single()
+                modules (
+                    *,
+                    lessons (*)
+                )
+            `)
+            .eq('slug', slug)
+            .single()
 
-    if (error) {
-        // PGRST116: JSON object requested, multiple (or no) rows returned
-        if (error.code !== 'PGRST116') {
-            console.error('Error fetching course:', error)
+        if (error) {
+            console.error('Error fetching course (cached):', error)
+            return null
         }
-        return null
-    }
+        return data as CourseWithModules
+    },
+    ['course-data-by-slug'],
+    { tags: ['course'] }
+)
 
+export async function getCourseBySlug(slug: string): Promise<CourseWithModules | null> {
+    // 1. Fetch raw data from Cache (Fast, Shared)
+    const data = await getCachedCourseData(slug)
+
+    if (!data) return null
+
+    // 2. Dynamic Scrubbing (Per-User, No Cache)
     // Sort modules and lessons by position
-    if (data?.modules) {
+    if (data.modules && Array.isArray(data.modules)) {
+        // Deep copy to avoid mutating the cached object for other users
+        const modules = JSON.parse(JSON.stringify(data.modules))
+
         // Check if user is admin via Session (robust check)
         const session = await getSession()
         const userGrade = session?.grade
@@ -197,10 +212,10 @@ export async function getCourseBySlug(slug: string) {
 
         const levelWeight = { 'free': 0, 'plus': 1, 'alpha': 2 }
 
-        data.modules.sort((a: Module, b: Module) => a.position - b.position)
-        data.modules.forEach((module: ModuleWithLessons) => {
+        modules.sort((a: Module, b: Module) => (a.position || 0) - (b.position || 0))
+        modules.forEach((module: ModuleWithLessons) => {
             if (module.lessons) {
-                module.lessons.sort((a: Lesson, b: Lesson) => a.position - b.position)
+                module.lessons.sort((a: Lesson, b: Lesson) => (a.position || 0) - (b.position || 0))
 
                 // Scrubbing Logic
                 module.lessons.forEach((lesson: Lesson) => {
@@ -216,8 +231,12 @@ export async function getCourseBySlug(slug: string) {
                 })
             }
         })
+
+        // Return valid data with scrubbed modules
+        return { ...data, modules }
     }
-    return data as CourseWithModules
+
+    return data
 }
 
 // --- Admin Dedicated Action to bypass all scrubbing ---
