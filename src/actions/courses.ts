@@ -220,7 +220,7 @@ export async function getCourseBySlug(slug: string): Promise<CourseWithModules |
                 // Scrubbing Logic
                 module.lessons.forEach((lesson: Lesson) => {
                     const requiredLevel = lesson.access_level || 'plus'
-                    const contentWeight = levelWeight[requiredLevel as keyof typeof levelWeight] || 1
+                    const contentWeight = levelWeight[requiredLevel as keyof typeof levelWeight] ?? 1
 
                     if (userWeight < contentWeight) {
                         // SCRUB DATA
@@ -327,7 +327,7 @@ export async function getCourseById(id: string) {
                 // Scrubbing Logic
                 module.lessons.forEach((lesson: Lesson) => {
                     const requiredLevel = lesson.access_level || 'plus'
-                    const contentWeight = levelWeight[requiredLevel as keyof typeof levelWeight] || 1
+                    const contentWeight = levelWeight[requiredLevel as keyof typeof levelWeight] ?? 1
 
                     if (userWeight < contentWeight) {
                         // SCRUB DATA
