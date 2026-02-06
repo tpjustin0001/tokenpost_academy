@@ -99,8 +99,8 @@ export function MobileNav({ courses = [], user }: MobileNavProps) {
                             <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
                         </SheetHeader>
 
-                        <Tabs defaultValue={isCoursePage ? "curriculum" : "menu"} className="flex-1 flex flex-col w-full">
-                            <div className="px-6 py-2 border-b border-border">
+                        <Tabs defaultValue={isCoursePage ? "curriculum" : "menu"} className="flex-1 flex flex-col w-full min-h-0">
+                            <div className="px-6 py-2 border-b border-border shrink-0">
                                 <TabsList className="w-full grid grid-cols-2">
                                     <TabsTrigger value="menu">메뉴</TabsTrigger>
                                     <TabsTrigger value="curriculum" disabled={!isCoursePage}>
@@ -109,8 +109,8 @@ export function MobileNav({ courses = [], user }: MobileNavProps) {
                                 </TabsList>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto">
-                                <TabsContent value="menu" className="m-0 py-4 px-3 space-y-1">
+                            <div className="flex-1 overflow-y-auto overscroll-contain min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+                                <TabsContent value="menu" className="m-0 py-4 px-3 space-y-1 h-full">
                                     {SIDEBAR_MENU.map((item) => {
                                         const isActive = pathname === item.href
                                         return (
@@ -163,7 +163,7 @@ export function MobileNav({ courses = [], user }: MobileNavProps) {
                                     </div>
                                 </TabsContent>
 
-                                <TabsContent value="curriculum" className="m-0 py-2">
+                                <TabsContent value="curriculum" className="m-0 py-2 h-full">
                                     {currentCourse ? (
                                         <div className="px-4 pb-10">
                                             <h3 className="font-bold text-lg mb-4 px-2">{currentCourse.title}</h3>
